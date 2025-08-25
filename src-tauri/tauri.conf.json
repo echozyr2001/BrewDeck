@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "brew-deck",
+  "productName": "BrewDeck",
   "version": "0.1.0",
   "identifier": "com.echo.brew-deck",
   "build": {
@@ -12,9 +12,14 @@
   "app": {
     "windows": [
       {
-        "title": "brew-deck",
-        "width": 800,
-        "height": 600
+        "title": "BrewDeck - Homebrew Package Manager",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600,
+        "center": true,
+        "decorations": true,
+        "transparent": false
       }
     ],
     "security": {
