@@ -128,24 +128,210 @@ async fn update_all_packages() -> Result<String, String> {
 
 #[tauri::command]
 async fn search_packages(query: String) -> Result<Vec<BrewPackage>, String> {
-    let output = Command::new("brew")
+    // Gather search results
+    let search_output = Command::new("brew")
         .args(["search", &query])
         .output()
         .map_err(|e| format!("Failed to search packages: {e}"))?;
 
-    let packages: Vec<BrewPackage> = String::from_utf8_lossy(&output.stdout)
+    let results: Vec<String> = String::from_utf8_lossy(&search_output.stdout)
         .lines()
         .filter(|line| !line.is_empty())
-        .map(|package_name| BrewPackage {
-            name: package_name.to_string(),
-            version: "latest".to_string(),
-            description: format!("Search result for: {package_name}"),
-            installed: false,
-            outdated: false,
+        .map(|s| s.to_string())
+        .collect();
+
+    // Get installed and outdated formulae to mark status
+    let installed_output = Command::new("brew")
+        .args(["list", "--formula"])
+        .output()
+        .map_err(|e| format!("Failed to get installed formulae: {e}"))?;
+    let installed: Vec<String> = String::from_utf8_lossy(&installed_output.stdout)
+        .lines()
+        .map(|s| s.to_string())
+        .collect();
+
+    let outdated_output = Command::new("brew")
+        .args(["outdated", "--formula"])
+        .output()
+        .map_err(|e| format!("Failed to get outdated formulae: {e}"))?;
+    let outdated: Vec<String> = String::from_utf8_lossy(&outdated_output.stdout)
+        .lines()
+        .map(|s| s.to_string())
+        .collect();
+
+    let packages: Vec<BrewPackage> = results
+        .into_iter()
+        .map(|name| {
+            let is_installed = installed.contains(&name);
+            let is_outdated = is_installed && outdated.contains(&name);
+            BrewPackage {
+                name: name.clone(),
+                version: "latest".to_string(),
+                description: format!("Search result for: {name}"),
+                installed: is_installed,
+                outdated: is_outdated,
+            }
         })
         .collect();
 
     Ok(packages)
+}
+
+// =====================
+// Casks (Apps) commands
+// =====================
+
+#[tauri::command]
+async fn get_cask_info() -> Result<BrewInfo, String> {
+    let mut packages = Vec::new();
+
+    let installed_output = Command::new("brew")
+        .args(["list", "--cask"])
+        .output()
+        .map_err(|e| format!("Failed to get installed casks: {e}"))?;
+
+    let installed: Vec<String> = String::from_utf8_lossy(&installed_output.stdout)
+        .lines()
+        .map(|s| s.to_string())
+        .collect();
+
+    let outdated_output = Command::new("brew")
+        .args(["outdated", "--cask"])
+        .output()
+        .map_err(|e| format!("Failed to get outdated casks: {e}"))?;
+
+    let outdated: Vec<String> = String::from_utf8_lossy(&outdated_output.stdout)
+        .lines()
+        .map(|s| s.to_string())
+        .collect();
+
+    for cask in installed {
+        let is_outdated = outdated.contains(&cask);
+        packages.push(BrewPackage {
+            name: cask.clone(),
+            version: "latest".to_string(),
+            description: format!("Cask: {cask}"),
+            installed: true,
+            outdated: is_outdated,
+        });
+    }
+
+    Ok(BrewInfo {
+        total_installed: packages.len(),
+        total_outdated: outdated.len(),
+        packages,
+    })
+}
+
+#[tauri::command]
+async fn search_casks(query: String) -> Result<Vec<BrewPackage>, String> {
+    // Search casks matching query
+    let search_output = Command::new("brew")
+        .args(["search", "--casks", &query])
+        .output()
+        .map_err(|e| format!("Failed to search casks: {e}"))?;
+
+    let results: Vec<String> = String::from_utf8_lossy(&search_output.stdout)
+        .lines()
+        .filter(|line| !line.is_empty())
+        .map(|s| s.to_string())
+        .collect();
+
+    // Installed and outdated casks
+    let installed_output = Command::new("brew")
+        .args(["list", "--cask"])
+        .output()
+        .map_err(|e| format!("Failed to get installed casks: {e}"))?;
+    let installed: Vec<String> = String::from_utf8_lossy(&installed_output.stdout)
+        .lines()
+        .map(|s| s.to_string())
+        .collect();
+
+    let outdated_output = Command::new("brew")
+        .args(["outdated", "--cask"])
+        .output()
+        .map_err(|e| format!("Failed to get outdated casks: {e}"))?;
+    let outdated: Vec<String> = String::from_utf8_lossy(&outdated_output.stdout)
+        .lines()
+        .map(|s| s.to_string())
+        .collect();
+
+    let packages: Vec<BrewPackage> = results
+        .into_iter()
+        .map(|name| {
+            let is_installed = installed.contains(&name);
+            let is_outdated = is_installed && outdated.contains(&name);
+            BrewPackage {
+                name: name.clone(),
+                version: "latest".to_string(),
+                description: format!("Search result for cask: {name}"),
+                installed: is_installed,
+                outdated: is_outdated,
+            }
+        })
+        .collect();
+
+    Ok(packages)
+}
+
+#[tauri::command]
+async fn install_cask(package_name: String) -> Result<String, String> {
+    let output = Command::new("brew")
+        .args(["install", "--cask", &package_name])
+        .output()
+        .map_err(|e| format!("Failed to install cask: {e}"))?;
+
+    if output.status.success() {
+        Ok(format!("Successfully installed {package_name}"))
+    } else {
+        let error = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Failed to install {package_name}: {error}"))
+    }
+}
+
+#[tauri::command]
+async fn uninstall_cask(package_name: String) -> Result<String, String> {
+    let output = Command::new("brew")
+        .args(["uninstall", "--cask", &package_name])
+        .output()
+        .map_err(|e| format!("Failed to uninstall cask: {e}"))?;
+
+    if output.status.success() {
+        Ok(format!("Successfully uninstalled {package_name}"))
+    } else {
+        let error = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Failed to uninstall {package_name}: {error}"))
+    }
+}
+
+#[tauri::command]
+async fn update_cask(package_name: String) -> Result<String, String> {
+    let output = Command::new("brew")
+        .args(["upgrade", "--cask", &package_name])
+        .output()
+        .map_err(|e| format!("Failed to update cask: {e}"))?;
+
+    if output.status.success() {
+        Ok(format!("Successfully updated {package_name}"))
+    } else {
+        let error = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Failed to update {package_name}: {error}"))
+    }
+}
+
+#[tauri::command]
+async fn update_all_casks() -> Result<String, String> {
+    let output = Command::new("brew")
+        .args(["upgrade", "--cask"])
+        .output()
+        .map_err(|e| format!("Failed to update all casks: {e}"))?;
+
+    if output.status.success() {
+        Ok("Successfully updated all casks".to_string())
+    } else {
+        let error = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Failed to update all casks: {error}"))
+    }
 }
 
 #[tauri::command]
@@ -164,7 +350,13 @@ pub fn run() {
             uninstall_package,
             update_package,
             update_all_packages,
-            search_packages
+            search_packages,
+            get_cask_info,
+            search_casks,
+            install_cask,
+            uninstall_cask,
+            update_cask,
+            update_all_casks
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
