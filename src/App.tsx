@@ -295,7 +295,27 @@ function App() {
   const renderPackageCard = (pkg: BrewPackage, isSearchResult = false) => (
     <div key={pkg.name} className="package-card">
       <div className="package-header">
-        <FiPackage className="package-icon" />
+        <div className="package-icon-container">
+          <img 
+            src={`https://github.com/App-Fair/appcasks/releases/download/cask-${pkg.name}/AppIcon.png`}
+            alt={`${pkg.name} icon`}
+            className="package-icon"
+            onError={(e) => {
+              // Fallback to icon.horse if App-Fair icon fails
+              const target = e.target as HTMLImageElement;
+              const homepage = pkg.description.includes('homepage') ? 
+                pkg.description.split('homepage:')[1]?.split(' ')[0] : 
+                pkg.name;
+              target.src = `https://icon.horse/icon/${homepage}`;
+              target.onerror = () => {
+                // Final fallback to default icon
+                target.style.display = 'none';
+                target.nextElementSibling?.classList.remove('hidden');
+              };
+            }}
+          />
+          <FiPackage className="package-icon-fallback hidden" />
+        </div>
         <div className="package-info">
           <h3>{pkg.name}</h3>
           <p className="package-version">v{pkg.version}</p>

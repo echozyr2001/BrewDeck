@@ -262,9 +262,29 @@ body {
   margin-bottom: 1rem;
 }
 
+.package-icon-container {
+  position: relative;
+  flex-shrink: 0;
+}
+
 .package-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #F1F0E4;
+  border: 1px solid #BCA88D;
+}
+
+.package-icon-fallback {
+  width: 48px;
+  height: 48px;
   color: #3E3F29;
   flex-shrink: 0;
+}
+
+.package-icon-fallback.hidden {
+  display: none;
 }
 
 .package-info h3 {
