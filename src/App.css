@@ -276,6 +276,19 @@ body {
   border: 1px solid #BCA88D;
 }
 
+.package-icon.loading {
+  opacity: 0;
+}
+
+.package-icon-skeleton {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #BCA88D 25%, #7D8D86 50%, #BCA88D 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
 .package-icon-fallback {
   width: 48px;
   height: 48px;
@@ -285,6 +298,23 @@ body {
 
 .package-icon-fallback.hidden {
   display: none;
+}
+
+/* Shimmer animation */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, #BCA88D 25%, #7D8D86 50%, #BCA88D 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
 }
 
 .package-info h3 {
