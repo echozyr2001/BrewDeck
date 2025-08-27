@@ -10,6 +10,7 @@ import {
   FiExternalLink,
 } from "react-icons/fi";
 import { useBrewStore, type BrewPackage } from "./stores/brewStore";
+import { openUrl } from '@tauri-apps/plugin-opener';
 import "./App.css";
 
 
@@ -287,7 +288,7 @@ function App() {
   };
 
   const renderPackageCard = (pkg: BrewPackage, isSearchResult = false) => {
-    const handleCardClick = (e: React.MouseEvent) => {
+    const handleCardClick = async (e: React.MouseEvent) => {
       // 阻止事件冒泡，避免触发按钮的点击事件
       e.stopPropagation();
       
@@ -299,7 +300,17 @@ function App() {
           url = 'https://' + url;
         }
         console.log('Opening homepage:', url);
-        window.open(url, '_blank');
+        try {
+          await openUrl(url);
+        } catch (error) {
+          console.error('Failed to open URL with Tauri opener:', error);
+          // 如果 Tauri opener 失败，尝试使用 window.open 作为后备
+          try {
+            window.open(url, '_blank');
+          } catch (windowError) {
+            console.error('Failed to open URL with window.open:', windowError);
+          }
+        }
       } else {
         console.log('No homepage available for:', pkg.name);
       }
