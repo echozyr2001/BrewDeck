@@ -1,5 +1,4 @@
 use anyhow::Result;
-use reqwest;
 use serde::{Deserialize, Serialize};
 use std::process::Command;
 
@@ -99,13 +98,13 @@ async fn get_brew_info() -> Result<BrewInfo, String> {
         let api_info = formula_info_map.get(&package_name);
         let description = api_info
             .and_then(|info| info.desc.as_ref())
-            .map(|desc| desc.clone())
+            .cloned()
             .unwrap_or_else(|| format!("Package: {package_name}"));
 
         let homepage = api_info
             .and_then(|info| info.homepage.as_ref())
-            .map(|homepage| homepage.clone())
-            .unwrap_or_else(|| String::new());
+            .cloned()
+            .unwrap_or_else(String::new);
 
         packages.push(BrewPackage {
             name: package_name.clone(),
@@ -217,7 +216,7 @@ async fn search_packages(query: String) -> Result<Vec<BrewPackage>, String> {
                 || formula
                     .desc
                     .as_ref()
-                    .map_or(false, |desc| desc.to_lowercase().contains(&query_lower))
+                    .is_some_and(|desc| desc.to_lowercase().contains(&query_lower))
         })
         .take(50) // Limit results
         .collect();
@@ -256,10 +255,7 @@ async fn search_packages(query: String) -> Result<Vec<BrewPackage>, String> {
                     .unwrap_or_else(|| format!("Formula: {}", formula_info.name)),
                 installed: is_installed,
                 outdated: is_outdated,
-                homepage: formula_info
-                    .homepage
-                    .clone()
-                    .unwrap_or_else(|| String::new()),
+                homepage: formula_info.homepage.clone().unwrap_or_default(),
                 dependencies: Vec::new(),
                 conflicts: Vec::new(),
                 caveats: String::new(),
@@ -325,13 +321,13 @@ async fn get_cask_info() -> Result<BrewInfo, String> {
         let api_info = cask_info_map.get(&cask);
         let description = api_info
             .and_then(|info| info.desc.as_ref())
-            .map(|desc| desc.clone())
+            .cloned()
             .unwrap_or_else(|| format!("Cask: {cask}"));
 
         let homepage = api_info
             .and_then(|info| info.homepage.as_ref())
-            .map(|homepage| homepage.clone())
-            .unwrap_or_else(|| String::new());
+            .cloned()
+            .unwrap_or_else(String::new);
 
         packages.push(BrewPackage {
             name: cask.clone(),
@@ -382,7 +378,7 @@ async fn search_casks(query: String) -> Result<Vec<BrewPackage>, String> {
                 || cask
                     .desc
                     .as_ref()
-                    .map_or(false, |desc| desc.to_lowercase().contains(&query_lower))
+                    .is_some_and(|desc| desc.to_lowercase().contains(&query_lower))
         })
         .take(50) // Limit results
         .collect();
@@ -421,7 +417,7 @@ async fn search_casks(query: String) -> Result<Vec<BrewPackage>, String> {
                     .unwrap_or_else(|| format!("Cask: {}", cask_info.token)),
                 installed: is_installed,
                 outdated: is_outdated,
-                homepage: cask_info.homepage.clone().unwrap_or_else(|| String::new()),
+                homepage: cask_info.homepage.clone().unwrap_or_default(),
                 dependencies: Vec::new(),
                 conflicts: Vec::new(),
                 caveats: String::new(),
@@ -522,12 +518,12 @@ async fn get_package_details_from_api(
     // Fetch data from Homebrew API
     let response = reqwest::get(api_url)
         .await
-        .map_err(|e| format!("Failed to fetch API data: {}", e))?;
+        .map_err(|e| format!("Failed to fetch API data: {e}"))?;
 
     let packages: Vec<serde_json::Value> = response
         .json()
         .await
-        .map_err(|e| format!("Failed to parse API response: {}", e))?;
+        .map_err(|e| format!("Failed to parse API response: {e}"))?;
 
     // Find the specific package (try exact match first, then case-insensitive)
     // For casks, use "token" field; for formulae, use "name" field
@@ -548,7 +544,7 @@ async fn get_package_details_from_api(
                     .unwrap_or(false)
             })
         })
-        .ok_or_else(|| format!("Package '{}' not found in API", package_name))?;
+        .ok_or_else(|| format!("Package '{package_name}' not found in API"))?;
 
     // Extract information from API response
     let mut package = BrewPackage {
@@ -601,14 +597,14 @@ async fn get_package_details_from_api(
     // Check if installed using brew command
     let installed_output = if package_type == "cask" {
         Command::new("brew")
-            .args(["list", "--cask", &package_name])
+            .args(["list", "--cask", package_name])
             .output()
-            .map_err(|e| format!("Failed to check if cask is installed: {}", e))?
+            .map_err(|e| format!("Failed to check if cask is installed: {e}"))?
     } else {
         Command::new("brew")
-            .args(["list", &package_name])
+            .args(["list", package_name])
             .output()
-            .map_err(|e| format!("Failed to check if formula is installed: {}", e))?
+            .map_err(|e| format!("Failed to check if formula is installed: {e}"))?
     };
 
     package.installed = installed_output.status.success();
@@ -617,14 +613,14 @@ async fn get_package_details_from_api(
     if package.installed {
         let outdated_output = if package_type == "cask" {
             Command::new("brew")
-                .args(["outdated", "--cask", &package_name])
+                .args(["outdated", "--cask", package_name])
                 .output()
-                .map_err(|e| format!("Failed to check if cask is outdated: {}", e))?
+                .map_err(|e| format!("Failed to check if cask is outdated: {e}"))?
         } else {
             Command::new("brew")
-                .args(["outdated", &package_name])
+                .args(["outdated", package_name])
                 .output()
-                .map_err(|e| format!("Failed to check if formula is outdated: {}", e))?
+                .map_err(|e| format!("Failed to check if formula is outdated: {e}"))?
         };
 
         package.outdated = outdated_output.status.success();
@@ -641,12 +637,12 @@ async fn get_package_details_from_brew_info(
         Command::new("brew")
             .args(["info", "--cask", package_name])
             .output()
-            .map_err(|e| format!("Failed to get cask info: {}", e))?
+            .map_err(|e| format!("Failed to get cask info: {e}"))?
     } else {
         Command::new("brew")
             .args(["info", package_name])
             .output()
-            .map_err(|e| format!("Failed to get formula info: {}", e))?
+            .map_err(|e| format!("Failed to get formula info: {e}"))?
     };
 
     if !output.status.success() {
@@ -684,7 +680,7 @@ async fn get_package_details_from_brew_info(
         }
 
         // Parse version (format: "==> package_name: version")
-        if line.starts_with(&format!("==> {}: ", package_name)) {
+        if line.starts_with(&format!("==> {package_name}: ")) {
             if let Some(version_part) = line.split(": ").nth(1) {
                 // Extract version from "stable 4.1.0 (bottled), HEAD"
                 if let Some(version) = version_part.split_whitespace().nth(1) {
@@ -755,12 +751,12 @@ async fn get_package_details_from_brew_info(
         Command::new("brew")
             .args(["list", "--cask", package_name])
             .output()
-            .map_err(|e| format!("Failed to check if cask is installed: {}", e))?
+            .map_err(|e| format!("Failed to check if cask is installed: {e}"))?
     } else {
         Command::new("brew")
             .args(["list", package_name])
             .output()
-            .map_err(|e| format!("Failed to check if formula is installed: {}", e))?
+            .map_err(|e| format!("Failed to check if formula is installed: {e}"))?
     };
 
     package.installed = installed_output.status.success();
@@ -771,12 +767,12 @@ async fn get_package_details_from_brew_info(
             Command::new("brew")
                 .args(["outdated", "--cask", package_name])
                 .output()
-                .map_err(|e| format!("Failed to check if cask is outdated: {}", e))?
+                .map_err(|e| format!("Failed to check if cask is outdated: {e}"))?
         } else {
             Command::new("brew")
                 .args(["outdated", package_name])
                 .output()
-                .map_err(|e| format!("Failed to check if formula is outdated: {}", e))?
+                .map_err(|e| format!("Failed to check if formula is outdated: {e}"))?
         };
 
         package.outdated = outdated_output.status.success();
