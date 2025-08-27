@@ -7,9 +7,11 @@ import {
   FiRefreshCw, 
   FiHome, 
   FiGrid,
+  FiExternalLink,
 } from "react-icons/fi";
 import { useBrewStore, type BrewPackage } from "./stores/brewStore";
 import "./App.css";
+
 
 interface Category {
   id: string;
@@ -284,56 +286,98 @@ function App() {
     }
   };
 
-  const renderPackageCard = (pkg: BrewPackage, isSearchResult = false) => (
-    <div key={pkg.name} className="package-card">
-      <div className="package-header">
-        <AppIcon packageName={pkg.name} description={pkg.description} />
-        <div className="package-info">
-          <h3>{pkg.name}</h3>
-          <p className="package-version">v{pkg.version}</p>
-          <p className="package-description">{pkg.description}</p>
+  const renderPackageCard = (pkg: BrewPackage, isSearchResult = false) => {
+    const handleCardClick = (e: React.MouseEvent) => {
+      // 阻止事件冒泡，避免触发按钮的点击事件
+      e.stopPropagation();
+      
+      // 如果包有homepage，则打开官网
+      if (pkg.homepage && pkg.homepage.trim() !== '') {
+        // 确保URL有协议前缀
+        let url = pkg.homepage.trim();
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          url = 'https://' + url;
+        }
+        console.log('Opening homepage:', url);
+        window.open(url, '_blank');
+      } else {
+        console.log('No homepage available for:', pkg.name);
+      }
+    };
+
+    const handleActionClick = (e: React.MouseEvent, action: () => void) => {
+      e.stopPropagation();
+      action();
+    };
+
+    const hasHomepage = pkg.homepage && pkg.homepage.trim() !== '';
+    
+    return (
+      <div 
+        key={pkg.name} 
+        className={`package-card ${hasHomepage ? 'clickable' : ''}`} 
+        onClick={handleCardClick}
+      >
+        <div className="package-content">
+          <div className="package-left">
+            <AppIcon packageName={pkg.name} description={pkg.description} />
+            <div className="package-info">
+              <h3>{pkg.name}</h3>
+              <p className="package-description">{pkg.description}</p>
+              <div className="package-meta">
+                <span className="package-version">v{pkg.version}</span>
+                {pkg.installed && <span className="status-badge installed">Installed</span>}
+                {pkg.outdated && <span className="status-badge outdated">Outdated</span>}
+              </div>
+            </div>
+          </div>
+          
+          <div className="package-right">
+            {pkg.homepage && pkg.homepage.trim() !== '' && (
+              <div className="package-homepage-hint">
+                <FiExternalLink size={14} />
+                <span>Homepage</span>
+              </div>
+            )}
+            <div className="package-actions">
+              {!pkg.installed && (isSearchResult || activeTab === "discover") && (
+                <button
+                  onClick={(e) => handleActionClick(e, () => installPackage(pkg.name))}
+                  disabled={loading}
+                  className="btn btn-primary"
+                >
+                  <FiDownload size={16} />
+                  Install
+                </button>
+              )}
+              {pkg.installed && (
+                <>
+                  {pkg.outdated && (
+                    <button
+                      onClick={(e) => handleActionClick(e, () => updatePackage(pkg.name))}
+                      disabled={loading}
+                      className="btn btn-secondary"
+                    >
+                      <FiRefreshCw size={16} />
+                      Update
+                    </button>
+                  )}
+                  <button
+                    onClick={(e) => handleActionClick(e, () => uninstallPackage(pkg.name))}
+                    disabled={loading}
+                    className="btn btn-danger"
+                  >
+                    <FiTrash2 size={16} />
+                    Uninstall
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
-      <div className="package-status">
-        {pkg.installed && <span className="status-badge installed">Installed</span>}
-        {pkg.outdated && <span className="status-badge outdated">Outdated</span>}
-      </div>
-      <div className="package-actions">
-        {!pkg.installed && (isSearchResult || activeTab === "discover") && (
-          <button
-            onClick={() => installPackage(pkg.name)}
-            disabled={loading}
-            className="btn btn-primary"
-          >
-            <FiDownload size={16} />
-            Install
-          </button>
-        )}
-        {pkg.installed && (
-          <>
-            {pkg.outdated && (
-              <button
-                onClick={() => updatePackage(pkg.name)}
-                disabled={loading}
-                className="btn btn-secondary"
-              >
-                <FiRefreshCw size={16} />
-                Update
-              </button>
-            )}
-            <button
-              onClick={() => uninstallPackage(pkg.name)}
-              disabled={loading}
-              className="btn btn-danger"
-            >
-              <FiTrash2 size={16} />
-              Uninstall
-            </button>
-          </>
-        )}
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderCategoryCard = (category: Category) => (
     <div key={category.id} className="category-card">

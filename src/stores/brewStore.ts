@@ -8,6 +8,11 @@ export interface BrewPackage {
   description: string;
   installed: boolean;
   outdated: boolean;
+  homepage: string;
+  dependencies: string[];
+  conflicts: string[];
+  caveats: string;
+  analytics: number;
 }
 
 export interface BrewInfo {
@@ -33,6 +38,8 @@ interface BrewStore {
   
   // Cache
   cacheTimeout: number; // 5 minutes
+  
+
   
   // Actions
   setActiveTab: (tab: 'installed' | 'search' | 'discover') => void;
@@ -279,7 +286,9 @@ export const useBrewStore = create<BrewStore>()(
         } finally {
           set({ isRefreshing: false });
         }
-      }
+      },
+      
+
     }),
     {
       name: 'brewdeck-store',
