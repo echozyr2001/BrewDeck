@@ -41,6 +41,27 @@ const iconCache = {
   }
 };
 
+// Loading skeleton component
+const PackageCardSkeleton = () => (
+  <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-6 border border-white/40 shadow-lg shadow-slate-200/20">
+    <div className="flex items-start gap-5">
+      <div className="w-16 h-16 bg-gradient-to-br from-indigo-200 to-purple-200 rounded-2xl animate-pulse"></div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between mb-3">
+          <div className="h-7 bg-gradient-to-r from-slate-200 to-slate-300 rounded-xl w-32 animate-pulse"></div>
+          <div className="w-24 h-10 bg-gradient-to-r from-blue-200 to-indigo-200 rounded-2xl animate-pulse"></div>
+        </div>
+        <div className="h-5 bg-slate-200 rounded-lg mb-2 w-full animate-pulse"></div>
+        <div className="h-5 bg-slate-200 rounded-lg mb-4 w-3/4 animate-pulse"></div>
+        <div className="flex gap-3">
+          <div className="h-8 w-20 bg-slate-200 rounded-xl animate-pulse"></div>
+          <div className="h-8 w-24 bg-green-200 rounded-xl animate-pulse"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 // Icon loading component with cache and fallback
 const AppIcon = ({ packageName, description }: { packageName: string; description: string }) => {
   const [iconState, setIconState] = useState<'loading' | 'loaded' | 'fallback' | 'failed'>('loading');
@@ -87,18 +108,22 @@ const AppIcon = ({ packageName, description }: { packageName: string; descriptio
   };
 
   if (iconState === 'failed') {
-    return <FiPackage className="w-[54px] h-[54px] text-[#3E3F29] flex-shrink-0" />;
+    return (
+      <div className="w-16 h-16 bg-gradient-to-br from-indigo-100 via-purple-100 to-blue-100 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-xl shadow-indigo-500/20 border border-white/40">
+        <FiPackage className="w-8 h-8 text-indigo-500" />
+      </div>
+    );
   }
 
   return (
     <div className="relative flex-shrink-0">
       {iconState === 'loading' && (
-        <div className="w-[54px] h-[54px] rounded-lg shimmer"></div>
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-200 via-purple-200 to-blue-200 animate-pulse shadow-xl shadow-indigo-500/20"></div>
       )}
       <img 
         src={currentSrc}
         alt={`${packageName} icon`}
-        className={`w-[54px] h-[54px] rounded-lg object-cover bg-[#F1F0E4] border border-[#BCA88D] ${iconState === 'loading' ? 'opacity-0' : ''}`}
+        className={`w-16 h-16 rounded-2xl object-cover bg-white shadow-xl shadow-indigo-500/20 border border-white/40 ${iconState === 'loading' ? 'opacity-0' : ''}`}
         onLoad={handleImageLoad}
         onError={handleImageError}
         style={{ display: iconState === 'loading' ? 'none' : 'block' }}
@@ -326,63 +351,100 @@ function App() {
     return (
       <div 
         key={pkg.name} 
-        className={`bg-[#F1F0E4] rounded-xl p-4 shadow-sm border border-[#BCA88D] transition-all duration-200 h-[90px] flex items-center ${hasHomepage ? 'hover:shadow-md hover:-translate-y-1 hover:border-[#7D8D86] cursor-pointer' : 'hover:shadow-md hover:-translate-y-1'}`}
+        className={`group relative bg-white/70 backdrop-blur-xl rounded-3xl p-6 border border-white/40 shadow-lg shadow-slate-200/20 transition-all duration-500 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-2 hover:border-indigo-200/50 ${hasHomepage ? 'cursor-pointer' : ''}`}
         onClick={handleCardClick}
       >
-        <div className="flex items-center justify-between w-full h-full">
-          <div className="flex items-center gap-4 flex-1 h-full">
-            <AppIcon packageName={pkg.name} description={pkg.description} />
-            <div className="flex flex-col justify-center h-full">
-              <h3 className="text-base font-semibold text-[#3E3F29] mb-1 leading-tight">{pkg.name}</h3>
-              <p className="text-sm text-[#7D8D86] leading-tight mb-1 line-clamp-2 max-h-[2.4em]">{pkg.description}</p>
-              <div className="flex items-center gap-2 flex-wrap mt-1">
-                <span className="text-xs text-[#7D8D86] mb-0.5">v{pkg.version}</span>
-                {pkg.installed && <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-[#BCA88D] text-[#3E3F29]">Installed</span>}
-                {pkg.outdated && <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-[#7D8D86] text-[#F1F0E4]">Outdated</span>}
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex flex-col items-end justify-center gap-2 h-full">
-            {pkg.homepage && pkg.homepage.trim() !== '' && (
-              <div className="flex items-center gap-1 text-xs text-[#BCA88D] italic mb-2">
-                <FiExternalLink size={14} className="text-[#7D8D86]" />
-                <span>Homepage</span>
-              </div>
-            )}
-            <div className="flex gap-2 flex-wrap mt-1">
-              {!pkg.installed && (isSearchResult || activeTab === "discover") && (
-                <button
-                  onClick={(e) => handleActionClick(e, () => installPackage(pkg.name))}
-                  disabled={loading}
-                  className="inline-flex items-center gap-2 px-2 py-1 border-none rounded-md text-xs font-medium cursor-pointer transition-all duration-200 bg-[#3E3F29] text-[#F1F0E4] hover:bg-[#7D8D86] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <FiDownload size={16} />
-                  Install
-                </button>
-              )}
+        {/* Background gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/30 via-white/20 to-purple-50/30 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+        
+        <div className="relative z-10">
+          <div className="flex items-start gap-5">
+            <div className="relative flex-shrink-0">
+              <AppIcon packageName={pkg.name} description={pkg.description} />
               {pkg.installed && (
-                <>
-                  {pkg.outdated && (
+                <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full border-3 border-white shadow-lg flex items-center justify-center">
+                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                </div>
+              )}
+              {pkg.outdated && (
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-gradient-to-r from-orange-400 to-red-500 rounded-full border-2 border-white shadow-md animate-pulse"></div>
+              )}
+            </div>
+            
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-xl font-bold text-slate-800 group-hover:text-indigo-700 transition-colors duration-300">
+                    {pkg.name}
+                  </h3>
+                  {pkg.homepage && pkg.homepage.trim() !== '' && (
+                    <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 rounded-lg border border-blue-200 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                      <FiExternalLink size={12} className="text-blue-600" />
+                      <span className="text-xs text-blue-600 font-medium">Visit</span>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex flex-col gap-2">
+                  {!pkg.installed && (isSearchResult || activeTab === "discover") && (
                     <button
-                      onClick={(e) => handleActionClick(e, () => updatePackage(pkg.name))}
+                      onClick={(e) => handleActionClick(e, () => installPackage(pkg.name))}
                       disabled={loading}
-                      className="inline-flex items-center gap-2 px-2 py-1 border border-[#7D8D86] rounded-md text-xs font-medium cursor-pointer transition-all duration-200 bg-[#BCA88D] text-[#3E3F29] hover:bg-[#7D8D86] hover:text-[#F1F0E4] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="group/btn relative inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white rounded-2xl font-semibold shadow-xl shadow-blue-500/25 hover:shadow-2xl hover:shadow-blue-500/40 hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                     >
-                      <FiRefreshCw size={16} />
-                      Update
+                      <FiDownload size={16} className="group-hover/btn:scale-110 transition-transform duration-200" />
+                      <span>Install</span>
+                      <div className="absolute inset-0 bg-white/20 rounded-2xl opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
                     </button>
                   )}
-                  <button
-                    onClick={(e) => handleActionClick(e, () => uninstallPackage(pkg.name))}
-                    disabled={loading}
-                    className="inline-flex items-center gap-2 px-2 py-1 border-none rounded-md text-xs font-medium cursor-pointer transition-all duration-200 bg-[#7D8D86] text-[#F1F0E4] hover:bg-[#3E3F29] disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <FiTrash2 size={16} />
-                    Uninstall
-                  </button>
-                </>
-              )}
+                  {pkg.installed && (
+                    <div className="flex flex-col gap-2">
+                      {pkg.outdated && (
+                        <button
+                          onClick={(e) => handleActionClick(e, () => updatePackage(pkg.name))}
+                          disabled={loading}
+                          className="group/btn relative inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 text-white rounded-2xl font-semibold shadow-xl shadow-orange-500/25 hover:shadow-2xl hover:shadow-orange-500/40 hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                        >
+                          <FiRefreshCw size={16} className="group-hover/btn:rotate-180 transition-transform duration-300" />
+                          <span>Update</span>
+                          <div className="absolute inset-0 bg-white/20 rounded-2xl opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
+                        </button>
+                      )}
+                      <button
+                        onClick={(e) => handleActionClick(e, () => uninstallPackage(pkg.name))}
+                        disabled={loading}
+                        className="group/btn inline-flex items-center gap-2 px-4 py-2.5 bg-white/80 backdrop-blur-sm border border-slate-200 text-slate-700 rounded-2xl font-semibold shadow-lg hover:shadow-xl hover:bg-red-50 hover:border-red-200 hover:text-red-700 hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <FiTrash2 size={16} className="group-hover/btn:scale-110 transition-transform duration-200" />
+                        <span>Remove</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <p className="text-slate-600 leading-relaxed mb-4 line-clamp-2 group-hover:text-slate-700 transition-colors duration-300">
+                {pkg.description}
+              </p>
+              
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-xl border border-slate-200">
+                  <span className="text-xs font-bold text-slate-500">VERSION</span>
+                  <span className="text-sm font-bold text-slate-700">{pkg.version}</span>
+                </div>
+                {pkg.installed && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-green-100 rounded-xl border border-green-200">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm font-bold text-green-700">Installed</span>
+                  </div>
+                )}
+                {pkg.outdated && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-100 rounded-xl border border-orange-200">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm font-bold text-orange-700">Update Available</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -390,141 +452,379 @@ function App() {
     );
   };
 
+  const getCategoryIcon = (categoryId: string) => {
+    const iconMap: Record<string, string> = {
+      "Browsers": "🌐",
+      "Communication": "💬",
+      "Productivity": "⚡",
+      "Office Tools": "📄",
+      "Menu Bar": "📋",
+      "Utilities": "🔧",
+      "Maintenance": "🧹",
+      "Creative Tools": "🎨",
+      "Media": "🎵",
+      "Developer Tools": "👨‍💻",
+      "IDEs": "💻",
+      "Terminals": "⌨️",
+      "Virtualization": "📦",
+      "Gaming": "🎮",
+      "VPN": "🔒",
+      "Password Managers": "🔐"
+    };
+    return iconMap[categoryId] || "📱";
+  };
+
   const renderCategoryCard = (category: Category) => (
-    <div key={category.id} className="bg-[#F1F0E4] rounded-xl p-6 shadow-sm border border-[#BCA88D] transition-all duration-200 flex flex-col justify-between min-h-[120px] hover:shadow-md hover:-translate-y-1">
-      <div className="flex items-start gap-4 mb-4">
-        <FiGrid className="text-[#3E3F29] flex-shrink-0" />
-        <div>
-          <h3 className="text-lg font-semibold text-[#3E3F29] mb-1">{category.id}</h3>
-          <p className="text-sm text-[#7D8D86]">{category.casks.length} apps</p>
+    <div 
+      key={category.id} 
+      className="group relative bg-white/70 backdrop-blur-xl rounded-3xl p-8 border border-white/40 shadow-lg shadow-slate-200/20 transition-all duration-500 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-3 hover:border-indigo-200/50 cursor-pointer overflow-hidden"
+      onClick={() => {
+        setActiveType("cask");
+        setActiveTab("search");
+        setSearchQuery(category.id.toLowerCase());
+        searchPackages(category.id.toLowerCase());
+      }}
+    >
+      {/* Background gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/40 via-purple-50/30 to-blue-50/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+      
+      <div className="relative z-10">
+        <div className="flex items-start gap-6 mb-6">
+          <div className="relative">
+            <div className="w-16 h-16 bg-gradient-to-br from-indigo-100 via-purple-100 to-blue-100 rounded-2xl flex items-center justify-center text-3xl shadow-xl shadow-indigo-500/20 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+              {getCategoryIcon(category.id)}
+            </div>
+            <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg">
+              {category.casks.length}
+            </div>
+          </div>
+          <div className="flex-1">
+            <h3 className="text-2xl font-bold text-slate-800 mb-2 group-hover:text-indigo-700 transition-colors duration-300">
+              {category.id}
+            </h3>
+            <p className="text-slate-500 font-medium">{category.casks.length} applications available</p>
+          </div>
         </div>
-      </div>
-      <div className="flex justify-end">
-        <button
-          onClick={() => {
-            setActiveType("cask");
-            setActiveTab("search");
-            setSearchQuery(category.id.toLowerCase());
-            searchPackages(category.id.toLowerCase());
-          }}
-          className="inline-flex items-center gap-2 px-4 py-2 border-none rounded-md text-sm font-medium cursor-pointer transition-all duration-200 bg-[#3E3F29] text-[#F1F0E4] hover:bg-[#7D8D86]"
-        >
-          Browse Apps
-        </button>
+        
+        <div className="flex items-center justify-between">
+          <div className="flex -space-x-2">
+            {category.casks.slice(0, 4).map((cask, index) => (
+              <div 
+                key={cask}
+                className="w-8 h-8 bg-gradient-to-br from-indigo-200 to-purple-200 rounded-full border-3 border-white flex items-center justify-center text-sm font-bold text-indigo-700 shadow-lg group-hover:scale-110 transition-all duration-300"
+                style={{ 
+                  zIndex: 4 - index,
+                  transitionDelay: `${index * 50}ms`
+                }}
+              >
+                {cask.charAt(0).toUpperCase()}
+              </div>
+            ))}
+            {category.casks.length > 4 && (
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full border-3 border-white flex items-center justify-center text-sm font-bold text-white shadow-lg group-hover:scale-110 transition-all duration-300">
+                +{category.casks.length - 4}
+              </div>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-3 px-4 py-2 bg-indigo-50 rounded-2xl border border-indigo-200 group-hover:bg-indigo-100 transition-all duration-300">
+            <span className="text-indigo-700 font-semibold">Explore</span>
+            <FiExternalLink size={16} className="text-indigo-600 group-hover:translate-x-1 group-hover:scale-110 transition-all duration-300" />
+          </div>
+        </div>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="bg-gradient-to-br from-[#3E3F29] to-[#7D8D86] text-[#F1F0E4] p-4 shadow-lg">
-        <div className="flex justify-between items-center max-w-6xl mx-auto">
-          <div className="flex items-center gap-3">
-            <FiHome size={24} />
-            <h1 className="text-2xl font-semibold">BrewDeck</h1>
-          </div>
-          <div className="flex gap-3">
-            {brewInfo && brewInfo.total_outdated > 0 && (
-              <button
-                onClick={updateAllPackages}
-                disabled={loading}
-                className="inline-flex items-center gap-2 px-4 py-2 border border-[#7D8D86] rounded-md text-sm font-medium cursor-pointer transition-all duration-200 bg-[#BCA88D] text-[#3E3F29] hover:bg-[#7D8D86] hover:text-[#F1F0E4] disabled:opacity-50 disabled:cursor-not-allowed"
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
+      <header className="bg-white/70 backdrop-blur-2xl border-b border-white/20 shadow-lg shadow-indigo-500/5">
+        <div className="max-w-7xl mx-auto px-8 py-6">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-6">
+              <div className="relative">
+                <div className="w-14 h-14 bg-gradient-to-br from-indigo-600 via-purple-600 to-blue-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-indigo-500/25">
+                  <FiHome size={24} className="text-white" />
+                </div>
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full animate-pulse"></div>
+              </div>
+              <div>
+                <h1 className="text-3xl font-black bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 bg-clip-text text-transparent">
+                  BrewDeck
+                </h1>
+                <p className="text-slate-500 font-medium">Modern Homebrew Package Manager</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              {brewInfo && brewInfo.total_outdated > 0 && (
+                <button
+                  onClick={updateAllPackages}
+                  disabled={loading}
+                  className="group relative inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 text-white rounded-2xl font-semibold shadow-xl shadow-orange-500/25 hover:shadow-2xl hover:shadow-orange-500/40 hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                >
+                  <FiRefreshCw size={18} className={loading ? "animate-spin" : "group-hover:rotate-180 transition-transform duration-300"} />
+                  <span>Update All ({brewInfo.total_outdated})</span>
+                  <div className="absolute inset-0 bg-white/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </button>
+              )}
+              <button 
+                onClick={loadBrewInfo} 
+                disabled={loading} 
+                className="group inline-flex items-center gap-3 px-6 py-3 bg-white/80 backdrop-blur-sm border border-white/40 text-slate-700 rounded-2xl font-semibold shadow-lg hover:shadow-xl hover:bg-white/90 hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <FiRefreshCw size={16} />
-                Update All ({brewInfo.total_outdated})
+                <FiRefreshCw size={18} className={loading ? "animate-spin" : "group-hover:rotate-180 transition-transform duration-300"} />
+                <span>Refresh</span>
               </button>
-            )}
-            <button onClick={loadBrewInfo} disabled={loading} className="inline-flex items-center gap-2 px-4 py-2 border border-[#7D8D86] rounded-md text-sm font-medium cursor-pointer transition-all duration-200 bg-[#BCA88D] text-[#3E3F29] hover:bg-[#7D8D86] hover:text-[#F1F0E4] disabled:opacity-50 disabled:cursor-not-allowed">
-              <FiRefreshCw size={16} />
-              Refresh
-            </button>
+            </div>
           </div>
         </div>
       </header>
 
-      <nav className="bg-[#F1F0E4] border-b border-[#BCA88D] px-8 flex flex-col gap-2">
-        <div className="flex border-b border-[#BCA88D]">
-          <button
-            className={`inline-flex items-center gap-2 px-6 py-4 bg-none border-none text-sm font-medium cursor-pointer border-b-2 border-transparent transition-all duration-200 ${activeType === "formula" ? "text-[#3E3F29] border-b-[#BCA88D]" : "text-[#7D8D86] hover:text-[#3E3F29] hover:bg-[#BCA88D]"}`}
-            onClick={() => setActiveType("formula")}
-          >
-            Formulae
-          </button>
-          <button
-            className={`inline-flex items-center gap-2 px-6 py-4 bg-none border-none text-sm font-medium cursor-pointer border-b-2 border-transparent transition-all duration-200 ${activeType === "cask" ? "text-[#3E3F29] border-b-[#BCA88D]" : "text-[#7D8D86] hover:text-[#3E3F29] hover:bg-[#BCA88D]"}`}
-            onClick={() => setActiveType("cask")}
-          >
-            Casks
-          </button>
-        </div>
-        <div className="flex">
-          <button
-            className={`inline-flex items-center gap-2 px-6 py-4 bg-none border-none text-sm font-medium cursor-pointer border-b-2 border-transparent transition-all duration-200 ${activeTab === "installed" ? "text-[#3E3F29] border-b-[#BCA88D]" : "text-[#7D8D86] hover:text-[#3E3F29] hover:bg-[#BCA88D]"}`}
-            onClick={() => setActiveTab("installed")}
-          >
-            <FiPackage size={16} />
-            Installed ({brewInfo?.total_installed || 0})
-          </button>
-          <button
-            className={`inline-flex items-center gap-2 px-6 py-4 bg-none border-none text-sm font-medium cursor-pointer border-b-2 border-transparent transition-all duration-200 ${activeTab === "search" ? "text-[#3E3F29] border-b-[#BCA88D]" : "text-[#7D8D86] hover:text-[#3E3F29] hover:bg-[#BCA88D]"}`}
-            onClick={() => setActiveTab("search")}
-          >
-            <FiSearch size={16} />
-            Search
-          </button>
-          <button
-            className={`inline-flex items-center gap-2 px-6 py-4 bg-none border-none text-sm font-medium cursor-pointer border-b-2 border-transparent transition-all duration-200 ${activeTab === "discover" ? "text-[#3E3F29] border-b-[#BCA88D]" : "text-[#7D8D86] hover:text-[#3E3F29] hover:bg-[#BCA88D]"}`}
-            onClick={() => setActiveTab("discover")}
-          >
-            <FiGrid size={16} />
-            Discover
-          </button>
+      <nav className="bg-white/50 backdrop-blur-2xl border-b border-white/30">
+        <div className="max-w-7xl mx-auto px-8">
+          <div className="flex items-center justify-between py-4 border-b border-white/30">
+            <div className="flex items-center gap-2">
+              <button
+                className={`group relative px-6 py-3 rounded-2xl font-semibold transition-all duration-300 ${
+                  activeType === "formula" 
+                    ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-xl shadow-indigo-500/25" 
+                    : "text-slate-600 hover:text-slate-800 hover:bg-white/60"
+                }`}
+                onClick={() => setActiveType("formula")}
+              >
+                <span className="relative z-10 flex items-center gap-2">
+                  📦 <span>Formulae</span>
+                </span>
+                {activeType === "formula" && (
+                  <div className="absolute inset-0 bg-white/20 rounded-2xl"></div>
+                )}
+              </button>
+              <button
+                className={`group relative px-6 py-3 rounded-2xl font-semibold transition-all duration-300 ${
+                  activeType === "cask" 
+                    ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-xl shadow-indigo-500/25" 
+                    : "text-slate-600 hover:text-slate-800 hover:bg-white/60"
+                }`}
+                onClick={() => setActiveType("cask")}
+              >
+                <span className="relative z-10 flex items-center gap-2">
+                  🖥️ <span>Applications</span>
+                </span>
+                {activeType === "cask" && (
+                  <div className="absolute inset-0 bg-white/20 rounded-2xl"></div>
+                )}
+              </button>
+            </div>
+            {brewInfo && (
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2 px-4 py-2 bg-green-50 rounded-xl border border-green-200">
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-green-700 font-semibold">{brewInfo.total_installed} installed</span>
+                </div>
+                {brewInfo.total_outdated > 0 && (
+                  <div className="flex items-center gap-2 px-4 py-2 bg-orange-50 rounded-xl border border-orange-200">
+                    <div className="w-3 h-3 bg-orange-500 rounded-full animate-pulse"></div>
+                    <span className="text-orange-700 font-semibold">{brewInfo.total_outdated} updates</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2 py-4">
+            <button
+              className={`group relative inline-flex items-center gap-3 px-6 py-3 rounded-2xl font-semibold transition-all duration-300 ${
+                activeTab === "installed" 
+                  ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-xl shadow-blue-500/25" 
+                  : "text-slate-600 hover:text-slate-800 hover:bg-white/60"
+              }`}
+              onClick={() => setActiveTab("installed")}
+            >
+              <FiPackage size={18} />
+              <span>Installed</span>
+              {brewInfo?.total_installed && (
+                <span className={`px-3 py-1 rounded-xl text-sm font-bold ${
+                  activeTab === "installed" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-600"
+                }`}>
+                  {brewInfo.total_installed}
+                </span>
+              )}
+              {activeTab === "installed" && (
+                <div className="absolute inset-0 bg-white/10 rounded-2xl"></div>
+              )}
+            </button>
+            <button
+              className={`group relative inline-flex items-center gap-3 px-6 py-3 rounded-2xl font-semibold transition-all duration-300 ${
+                activeTab === "search" 
+                  ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-xl shadow-blue-500/25" 
+                  : "text-slate-600 hover:text-slate-800 hover:bg-white/60"
+              }`}
+              onClick={() => setActiveTab("search")}
+            >
+              <FiSearch size={18} />
+              <span>Search</span>
+              {activeTab === "search" && (
+                <div className="absolute inset-0 bg-white/10 rounded-2xl"></div>
+              )}
+            </button>
+            <button
+              className={`group relative inline-flex items-center gap-3 px-6 py-3 rounded-2xl font-semibold transition-all duration-300 ${
+                activeTab === "discover" 
+                  ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-xl shadow-blue-500/25" 
+                  : "text-slate-600 hover:text-slate-800 hover:bg-white/60"
+              }`}
+              onClick={() => setActiveTab("discover")}
+            >
+              <FiGrid size={18} />
+              <span>Discover</span>
+              {activeTab === "discover" && (
+                <div className="absolute inset-0 bg-white/10 rounded-2xl"></div>
+              )}
+            </button>
+          </div>
         </div>
       </nav>
 
-      <main className="flex-1 p-8 max-w-6xl mx-auto w-full">
+      <main className="flex-1 p-8 max-w-7xl mx-auto w-full">
         {message && (
-          <div className="bg-[#BCA88D] border border-[#7D8D86] text-[#3E3F29] p-4 rounded-md mb-6 flex justify-between items-center">
-            {message}
-            <button onClick={clearMessage} className="bg-none border-none text-[#3E3F29] text-xl cursor-pointer p-1">×</button>
+          <div className="relative mb-8 p-6 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border border-blue-200/50 rounded-3xl shadow-lg shadow-blue-500/10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-4 h-4 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full animate-pulse"></div>
+                <span className="text-blue-800 font-medium">{message}</span>
+              </div>
+              <button 
+                onClick={clearMessage} 
+                className="w-8 h-8 flex items-center justify-center text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-xl transition-all duration-200 font-bold"
+              >
+                ×
+              </button>
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-400/5 to-indigo-400/5 rounded-3xl"></div>
           </div>
         )}
 
         {activeTab === "search" && (
           <div className="flex flex-col gap-6">
-            <div className="flex items-center gap-3 bg-[#F1F0E4] p-4 rounded-xl shadow-sm border border-[#BCA88D]">
-              <FiSearch size={20} />
+            <div className="relative mb-8">
+              <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">
+                <FiSearch size={24} className="text-indigo-400" />
+              </div>
               <input
                 type="text"
-                placeholder={`Search for ${activeType === "formula" ? "packages" : "apps"}...`}
+                placeholder={`Search for ${activeType === "formula" ? "packages" : "applications"}...`}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={handleKeyPress}
-                className="flex-1 border-none outline-none text-base text-[#3E3F29] bg-transparent placeholder:text-[#7D8D86]"
+                className="w-full pl-16 pr-40 py-6 bg-white/70 backdrop-blur-xl border border-white/40 rounded-3xl text-slate-800 placeholder:text-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-300 transition-all duration-300 shadow-xl shadow-indigo-500/10 text-lg font-medium"
               />
-              <button onClick={handleSearch} disabled={loading} className="inline-flex items-center gap-2 px-4 py-2 border-none rounded-md text-sm font-medium cursor-pointer transition-all duration-200 bg-[#3E3F29] text-[#F1F0E4] hover:bg-[#7D8D86] disabled:opacity-50 disabled:cursor-not-allowed">
-                Search
+              <button 
+                onClick={handleSearch} 
+                disabled={loading} 
+                className="absolute inset-y-0 right-0 mr-3 my-3 px-8 bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 text-white rounded-2xl font-semibold shadow-xl shadow-indigo-500/25 hover:shadow-2xl hover:shadow-indigo-500/40 hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              >
+                {loading ? (
+                  <FiRefreshCw size={20} className="animate-spin" />
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <span>Search</span>
+                    <FiSearch size={18} />
+                  </span>
+                )}
               </button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {searchResults.map((pkg) => renderPackageCard(pkg, true))}
-            </div>
+            
+            {loading ? (
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <PackageCardSkeleton key={index} />
+                ))}
+              </div>
+            ) : searchResults.length > 0 ? (
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                {searchResults.map((pkg) => renderPackageCard(pkg, true))}
+              </div>
+            ) : searchQuery && !loading ? (
+              <div className="text-center py-16">
+                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <FiSearch size={24} className="text-slate-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-800 mb-2">No results found</h3>
+                <p className="text-slate-500">Try adjusting your search terms or browse categories instead.</p>
+              </div>
+            ) : !searchQuery ? (
+              <div className="text-center py-16">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <FiSearch size={24} className="text-blue-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-800 mb-2">Search for packages</h3>
+                <p className="text-slate-500">Enter a package name or keyword to get started.</p>
+              </div>
+            ) : null}
           </div>
         )}
 
         {activeTab === "installed" && (
           <div className="flex flex-col gap-6">
             {loading ? (
-              <div className="text-center py-12 text-[#7D8D86] text-lg">Loading packages...</div>
-            ) : brewInfo ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {brewInfo.packages.map((pkg) => renderPackageCard(pkg))}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <PackageCardSkeleton key={index} />
+                ))}
               </div>
+            ) : brewInfo && brewInfo.packages.length > 0 ? (
+              <>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-slate-800">
+                    Installed {activeType === "formula" ? "Packages" : "Applications"}
+                  </h2>
+                  <div className="flex items-center gap-4 text-sm text-slate-500">
+                    <span className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      {brewInfo.total_installed} total
+                    </span>
+                    {brewInfo.total_outdated > 0 && (
+                      <span className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                        {brewInfo.total_outdated} outdated
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                  {brewInfo.packages.map((pkg) => renderPackageCard(pkg))}
+                </div>
+              </>
             ) : (
-              <div className="text-center py-12 text-[#7D8D86]">
-                <FiPackage size={48} className="mx-auto mb-4" />
-                <h2 className="text-2xl font-semibold text-[#3E3F29] mb-2">No packages found</h2>
-                <p className="text-sm">Make sure Homebrew is installed and try refreshing.</p>
+              <div className="text-center py-20">
+                <div className="relative mb-8">
+                  <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4 float-animation">
+                    <FiPackage size={32} className="text-blue-600" />
+                  </div>
+                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-32 bg-blue-500/10 rounded-full animate-ping"></div>
+                </div>
+                <h3 className="text-2xl font-bold text-slate-800 mb-3">No packages installed</h3>
+                <p className="text-slate-500 mb-8 max-w-md mx-auto leading-relaxed">
+                  {activeType === "formula" 
+                    ? "Start your journey by installing some useful command-line tools and packages." 
+                    : "Discover amazing applications and install them with just one click."
+                  }
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <button
+                    onClick={() => setActiveTab("discover")}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200"
+                  >
+                    <FiGrid size={16} />
+                    Discover Apps
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("search")}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl font-medium shadow-sm hover:shadow-md hover:bg-slate-50 transition-all duration-200"
+                  >
+                    <FiSearch size={16} />
+                    Search Packages
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -532,7 +832,20 @@ function App() {
 
         {activeTab === "discover" && (
           <div className="flex flex-col gap-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-500/25">
+                  <FiGrid size={24} className="text-white" />
+                </div>
+                <h2 className="text-4xl font-black bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 bg-clip-text text-transparent">
+                  Discover Applications
+                </h2>
+              </div>
+              <p className="text-xl text-slate-600 font-medium max-w-2xl mx-auto leading-relaxed">
+                Browse our curated collection of categories to find the perfect applications for your workflow
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
               {categories.map((category) => renderCategoryCard(category))}
             </div>
           </div>
