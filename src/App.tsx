@@ -87,18 +87,18 @@ const AppIcon = ({ packageName, description }: { packageName: string; descriptio
   };
 
   if (iconState === 'failed') {
-    return <FiPackage className="package-icon-fallback" />;
+    return <FiPackage className="w-[54px] h-[54px] text-[#3E3F29] flex-shrink-0" />;
   }
 
   return (
-    <div className="package-icon-container">
+    <div className="relative flex-shrink-0">
       {iconState === 'loading' && (
-        <div className="package-icon-skeleton shimmer"></div>
+        <div className="w-[54px] h-[54px] rounded-lg shimmer"></div>
       )}
       <img 
         src={currentSrc}
         alt={`${packageName} icon`}
-        className={`package-icon ${iconState === 'loading' ? 'loading' : ''}`}
+        className={`w-[54px] h-[54px] rounded-lg object-cover bg-[#F1F0E4] border border-[#BCA88D] ${iconState === 'loading' ? 'opacity-0' : ''}`}
         onLoad={handleImageLoad}
         onError={handleImageError}
         style={{ display: iconState === 'loading' ? 'none' : 'block' }}
@@ -326,36 +326,36 @@ function App() {
     return (
       <div 
         key={pkg.name} 
-        className={`package-card ${hasHomepage ? 'clickable' : ''}`} 
+        className={`bg-[#F1F0E4] rounded-xl p-4 shadow-sm border border-[#BCA88D] transition-all duration-200 h-[90px] flex items-center ${hasHomepage ? 'hover:shadow-md hover:-translate-y-1 hover:border-[#7D8D86] cursor-pointer' : 'hover:shadow-md hover:-translate-y-1'}`}
         onClick={handleCardClick}
       >
-        <div className="package-content">
-          <div className="package-left">
+        <div className="flex items-center justify-between w-full h-full">
+          <div className="flex items-center gap-4 flex-1 h-full">
             <AppIcon packageName={pkg.name} description={pkg.description} />
-            <div className="package-info">
-              <h3>{pkg.name}</h3>
-              <p className="package-description">{pkg.description}</p>
-              <div className="package-meta">
-                <span className="package-version">v{pkg.version}</span>
-                {pkg.installed && <span className="status-badge installed">Installed</span>}
-                {pkg.outdated && <span className="status-badge outdated">Outdated</span>}
+            <div className="flex flex-col justify-center h-full">
+              <h3 className="text-base font-semibold text-[#3E3F29] mb-1 leading-tight">{pkg.name}</h3>
+              <p className="text-sm text-[#7D8D86] leading-tight mb-1 line-clamp-2 max-h-[2.4em]">{pkg.description}</p>
+              <div className="flex items-center gap-2 flex-wrap mt-1">
+                <span className="text-xs text-[#7D8D86] mb-0.5">v{pkg.version}</span>
+                {pkg.installed && <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-[#BCA88D] text-[#3E3F29]">Installed</span>}
+                {pkg.outdated && <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-[#7D8D86] text-[#F1F0E4]">Outdated</span>}
               </div>
             </div>
           </div>
           
-          <div className="package-right">
+          <div className="flex flex-col items-end justify-center gap-2 h-full">
             {pkg.homepage && pkg.homepage.trim() !== '' && (
-              <div className="package-homepage-hint">
-                <FiExternalLink size={14} />
+              <div className="flex items-center gap-1 text-xs text-[#BCA88D] italic mb-2">
+                <FiExternalLink size={14} className="text-[#7D8D86]" />
                 <span>Homepage</span>
               </div>
             )}
-            <div className="package-actions">
+            <div className="flex gap-2 flex-wrap mt-1">
               {!pkg.installed && (isSearchResult || activeTab === "discover") && (
                 <button
                   onClick={(e) => handleActionClick(e, () => installPackage(pkg.name))}
                   disabled={loading}
-                  className="btn btn-primary"
+                  className="inline-flex items-center gap-2 px-2 py-1 border-none rounded-md text-xs font-medium cursor-pointer transition-all duration-200 bg-[#3E3F29] text-[#F1F0E4] hover:bg-[#7D8D86] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <FiDownload size={16} />
                   Install
@@ -367,7 +367,7 @@ function App() {
                     <button
                       onClick={(e) => handleActionClick(e, () => updatePackage(pkg.name))}
                       disabled={loading}
-                      className="btn btn-secondary"
+                      className="inline-flex items-center gap-2 px-2 py-1 border border-[#7D8D86] rounded-md text-xs font-medium cursor-pointer transition-all duration-200 bg-[#BCA88D] text-[#3E3F29] hover:bg-[#7D8D86] hover:text-[#F1F0E4] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <FiRefreshCw size={16} />
                       Update
@@ -376,7 +376,7 @@ function App() {
                   <button
                     onClick={(e) => handleActionClick(e, () => uninstallPackage(pkg.name))}
                     disabled={loading}
-                    className="btn btn-danger"
+                    className="inline-flex items-center gap-2 px-2 py-1 border-none rounded-md text-xs font-medium cursor-pointer transition-all duration-200 bg-[#7D8D86] text-[#F1F0E4] hover:bg-[#3E3F29] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <FiTrash2 size={16} />
                     Uninstall
@@ -391,15 +391,15 @@ function App() {
   };
 
   const renderCategoryCard = (category: Category) => (
-    <div key={category.id} className="category-card">
-      <div className="category-header">
-        <FiGrid className="category-icon" />
-        <div className="category-info">
-          <h3>{category.id}</h3>
-          <p>{category.casks.length} apps</p>
+    <div key={category.id} className="bg-[#F1F0E4] rounded-xl p-6 shadow-sm border border-[#BCA88D] transition-all duration-200 flex flex-col justify-between min-h-[120px] hover:shadow-md hover:-translate-y-1">
+      <div className="flex items-start gap-4 mb-4">
+        <FiGrid className="text-[#3E3F29] flex-shrink-0" />
+        <div>
+          <h3 className="text-lg font-semibold text-[#3E3F29] mb-1">{category.id}</h3>
+          <p className="text-sm text-[#7D8D86]">{category.casks.length} apps</p>
         </div>
       </div>
-      <div className="category-actions">
+      <div className="flex justify-end">
         <button
           onClick={() => {
             setActiveType("cask");
@@ -407,7 +407,7 @@ function App() {
             setSearchQuery(category.id.toLowerCase());
             searchPackages(category.id.toLowerCase());
           }}
-          className="btn btn-primary"
+          className="inline-flex items-center gap-2 px-4 py-2 border-none rounded-md text-sm font-medium cursor-pointer transition-all duration-200 bg-[#3E3F29] text-[#F1F0E4] hover:bg-[#7D8D86]"
         >
           Browse Apps
         </button>
@@ -416,25 +416,25 @@ function App() {
   );
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <div className="header-content">
-          <div className="logo">
+    <div className="min-h-screen flex flex-col">
+      <header className="bg-gradient-to-br from-[#3E3F29] to-[#7D8D86] text-[#F1F0E4] p-4 shadow-lg">
+        <div className="flex justify-between items-center max-w-6xl mx-auto">
+          <div className="flex items-center gap-3">
             <FiHome size={24} />
-            <h1>BrewDeck</h1>
+            <h1 className="text-2xl font-semibold">BrewDeck</h1>
           </div>
-          <div className="header-actions">
+          <div className="flex gap-3">
             {brewInfo && brewInfo.total_outdated > 0 && (
               <button
                 onClick={updateAllPackages}
                 disabled={loading}
-                className="btn btn-secondary"
+                className="inline-flex items-center gap-2 px-4 py-2 border border-[#7D8D86] rounded-md text-sm font-medium cursor-pointer transition-all duration-200 bg-[#BCA88D] text-[#3E3F29] hover:bg-[#7D8D86] hover:text-[#F1F0E4] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <FiRefreshCw size={16} />
                 Update All ({brewInfo.total_outdated})
               </button>
             )}
-            <button onClick={loadBrewInfo} disabled={loading} className="btn btn-secondary">
+            <button onClick={loadBrewInfo} disabled={loading} className="inline-flex items-center gap-2 px-4 py-2 border border-[#7D8D86] rounded-md text-sm font-medium cursor-pointer transition-all duration-200 bg-[#BCA88D] text-[#3E3F29] hover:bg-[#7D8D86] hover:text-[#F1F0E4] disabled:opacity-50 disabled:cursor-not-allowed">
               <FiRefreshCw size={16} />
               Refresh
             </button>
@@ -442,38 +442,38 @@ function App() {
         </div>
       </header>
 
-      <nav className="app-nav">
-        <div className="type-switch">
+      <nav className="bg-[#F1F0E4] border-b border-[#BCA88D] px-8 flex flex-col gap-2">
+        <div className="flex border-b border-[#BCA88D]">
           <button
-            className={`nav-tab ${activeType === "formula" ? "active" : ""}`}
+            className={`inline-flex items-center gap-2 px-6 py-4 bg-none border-none text-sm font-medium cursor-pointer border-b-2 border-transparent transition-all duration-200 ${activeType === "formula" ? "text-[#3E3F29] border-b-[#BCA88D]" : "text-[#7D8D86] hover:text-[#3E3F29] hover:bg-[#BCA88D]"}`}
             onClick={() => setActiveType("formula")}
           >
             Formulae
           </button>
           <button
-            className={`nav-tab ${activeType === "cask" ? "active" : ""}`}
+            className={`inline-flex items-center gap-2 px-6 py-4 bg-none border-none text-sm font-medium cursor-pointer border-b-2 border-transparent transition-all duration-200 ${activeType === "cask" ? "text-[#3E3F29] border-b-[#BCA88D]" : "text-[#7D8D86] hover:text-[#3E3F29] hover:bg-[#BCA88D]"}`}
             onClick={() => setActiveType("cask")}
           >
             Casks
           </button>
         </div>
-        <div className="tab-switch">
+        <div className="flex">
           <button
-            className={`nav-tab ${activeTab === "installed" ? "active" : ""}`}
+            className={`inline-flex items-center gap-2 px-6 py-4 bg-none border-none text-sm font-medium cursor-pointer border-b-2 border-transparent transition-all duration-200 ${activeTab === "installed" ? "text-[#3E3F29] border-b-[#BCA88D]" : "text-[#7D8D86] hover:text-[#3E3F29] hover:bg-[#BCA88D]"}`}
             onClick={() => setActiveTab("installed")}
           >
             <FiPackage size={16} />
             Installed ({brewInfo?.total_installed || 0})
           </button>
           <button
-            className={`nav-tab ${activeTab === "search" ? "active" : ""}`}
+            className={`inline-flex items-center gap-2 px-6 py-4 bg-none border-none text-sm font-medium cursor-pointer border-b-2 border-transparent transition-all duration-200 ${activeTab === "search" ? "text-[#3E3F29] border-b-[#BCA88D]" : "text-[#7D8D86] hover:text-[#3E3F29] hover:bg-[#BCA88D]"}`}
             onClick={() => setActiveTab("search")}
           >
             <FiSearch size={16} />
             Search
           </button>
           <button
-            className={`nav-tab ${activeTab === "discover" ? "active" : ""}`}
+            className={`inline-flex items-center gap-2 px-6 py-4 bg-none border-none text-sm font-medium cursor-pointer border-b-2 border-transparent transition-all duration-200 ${activeTab === "discover" ? "text-[#3E3F29] border-b-[#BCA88D]" : "text-[#7D8D86] hover:text-[#3E3F29] hover:bg-[#BCA88D]"}`}
             onClick={() => setActiveTab("discover")}
           >
             <FiGrid size={16} />
@@ -482,17 +482,17 @@ function App() {
         </div>
       </nav>
 
-      <main className="app-main">
+      <main className="flex-1 p-8 max-w-6xl mx-auto w-full">
         {message && (
-          <div className="message">
+          <div className="bg-[#BCA88D] border border-[#7D8D86] text-[#3E3F29] p-4 rounded-md mb-6 flex justify-between items-center">
             {message}
-            <button onClick={clearMessage} className="message-close">×</button>
+            <button onClick={clearMessage} className="bg-none border-none text-[#3E3F29] text-xl cursor-pointer p-1">×</button>
           </div>
         )}
 
         {activeTab === "search" && (
-          <div className="search-section">
-            <div className="search-box">
+          <div className="flex flex-col gap-6">
+            <div className="flex items-center gap-3 bg-[#F1F0E4] p-4 rounded-xl shadow-sm border border-[#BCA88D]">
               <FiSearch size={20} />
               <input
                 type="text"
@@ -500,38 +500,39 @@ function App() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={handleKeyPress}
+                className="flex-1 border-none outline-none text-base text-[#3E3F29] bg-transparent placeholder:text-[#7D8D86]"
               />
-              <button onClick={handleSearch} disabled={loading} className="btn btn-primary">
+              <button onClick={handleSearch} disabled={loading} className="inline-flex items-center gap-2 px-4 py-2 border-none rounded-md text-sm font-medium cursor-pointer transition-all duration-200 bg-[#3E3F29] text-[#F1F0E4] hover:bg-[#7D8D86] disabled:opacity-50 disabled:cursor-not-allowed">
                 Search
               </button>
             </div>
-            <div className="search-results">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {searchResults.map((pkg) => renderPackageCard(pkg, true))}
             </div>
           </div>
         )}
 
         {activeTab === "installed" && (
-          <div className="installed-section">
+          <div className="flex flex-col gap-6">
             {loading ? (
-              <div className="loading">Loading packages...</div>
+              <div className="text-center py-12 text-[#7D8D86] text-lg">Loading packages...</div>
             ) : brewInfo ? (
-              <div className="packages-grid">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {brewInfo.packages.map((pkg) => renderPackageCard(pkg))}
               </div>
             ) : (
-              <div className="empty-state">
-                <FiPackage size={48} />
-                <h2>No packages found</h2>
-                <p>Make sure Homebrew is installed and try refreshing.</p>
+              <div className="text-center py-12 text-[#7D8D86]">
+                <FiPackage size={48} className="mx-auto mb-4" />
+                <h2 className="text-2xl font-semibold text-[#3E3F29] mb-2">No packages found</h2>
+                <p className="text-sm">Make sure Homebrew is installed and try refreshing.</p>
               </div>
             )}
           </div>
         )}
 
         {activeTab === "discover" && (
-          <div className="discover-section">
-            <div className="categories-grid">
+          <div className="flex flex-col gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {categories.map((category) => renderCategoryCard(category))}
             </div>
           </div>

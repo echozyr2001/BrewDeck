@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import { invoke } from '@tauri-apps/api/core';
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import { invoke } from "@tauri-apps/api/core";
 
 export interface BrewPackage {
   name: string;
@@ -25,29 +25,27 @@ interface BrewStore {
   // State
   brewInfo: BrewInfo | null;
   // Per-type caches so switches are instant
-  brewInfoByType: Record<'formula' | 'cask', BrewInfo | null>;
-  lastFetchByType: Record<'formula' | 'cask', number | null>;
+  brewInfoByType: Record<"formula" | "cask", BrewInfo | null>;
+  lastFetchByType: Record<"formula" | "cask", number | null>;
   isRefreshing: boolean;
 
   searchResults: BrewPackage[];
   loading: boolean; // cold load only
   message: string;
-  activeTab: 'installed' | 'search' | 'discover';
-  activeType: 'formula' | 'cask';
+  activeTab: "installed" | "search" | "discover";
+  activeType: "formula" | "cask";
   searchQuery: string;
-  
+
   // Cache
   cacheTimeout: number; // 5 minutes
-  
 
-  
   // Actions
-  setActiveTab: (tab: 'installed' | 'search' | 'discover') => void;
-  setActiveType: (type: 'formula' | 'cask') => void;
+  setActiveTab: (tab: "installed" | "search" | "discover") => void;
+  setActiveType: (type: "formula" | "cask") => void;
   setSearchQuery: (query: string) => void;
   setMessage: (message: string) => void;
   clearMessage: () => void;
-  
+
   // Async actions
   loadBrewInfo: () => Promise<void>;
   searchPackages: (query: string) => Promise<void>;
@@ -55,10 +53,10 @@ interface BrewStore {
   uninstallPackage: (packageName: string) => Promise<void>;
   updatePackage: (packageName: string) => Promise<void>;
   updateAllPackages: () => Promise<void>;
-  
+
   // Cache management
-  shouldRefetch: (type: 'formula' | 'cask') => boolean;
-  clearCache: (type?: 'formula' | 'cask') => void;
+  shouldRefetch: (type: "formula" | "cask") => boolean;
+  clearCache: (type?: "formula" | "cask") => void;
 }
 
 export const useBrewStore = create<BrewStore>()(
@@ -72,50 +70,52 @@ export const useBrewStore = create<BrewStore>()(
 
       searchResults: [],
       loading: false,
-      message: '',
-      activeTab: 'installed',
-      activeType: 'formula',
-      searchQuery: '',
+      message: "",
+      activeTab: "installed",
+      activeType: "formula",
+      searchQuery: "",
       cacheTimeout: 5 * 60 * 1000, // 5 minutes
-      
+
       // State setters
       setActiveTab: (tab) => {
         set({ activeTab: tab });
-        if (tab !== 'discover') {
+        if (tab !== "discover") {
           get().loadBrewInfo();
         }
       },
-      
+
       setActiveType: (type) => {
         // Switch type and immediately expose cached data if present
         const { brewInfoByType } = get();
         set({ activeType: type, brewInfo: brewInfoByType[type] });
-        if (get().activeTab !== 'discover') {
+        if (get().activeTab !== "discover") {
           get().loadBrewInfo();
         }
       },
-      
+
       setSearchQuery: (query) => set({ searchQuery: query }),
-      
+
       setMessage: (message) => set({ message }),
-      
-      clearMessage: () => set({ message: '' }),
-      
+
+      clearMessage: () => set({ message: "" }),
+
       // Cache management
       shouldRefetch: (type) => {
         const { lastFetchByType, cacheTimeout } = get();
         const ts = lastFetchByType[type];
         return !ts || Date.now() - ts > cacheTimeout;
       },
-      
+
       clearCache: (type) => {
         if (!type) {
           set({ lastFetchByType: { formula: null, cask: null } });
         } else {
-          set((s) => ({ lastFetchByType: { ...s.lastFetchByType, [type]: null } }));
+          set((s) => ({
+            lastFetchByType: { ...s.lastFetchByType, [type]: null },
+          }));
         }
       },
-      
+
       // Async actions
       loadBrewInfo: async () => {
         const { activeType, brewInfoByType, shouldRefetch } = get();
@@ -140,28 +140,32 @@ export const useBrewStore = create<BrewStore>()(
 
         try {
           const info = await invoke<BrewInfo>(
-            activeType === 'formula' ? 'get_brew_info' : 'get_cask_info'
+            activeType === "formula" ? "get_brew_info" : "get_cask_info"
           );
           set((s) => ({
             brewInfo: info,
             brewInfoByType: { ...s.brewInfoByType, [activeType]: info },
             lastFetchByType: { ...s.lastFetchByType, [activeType]: Date.now() },
             loading: false,
-            isRefreshing: false
+            isRefreshing: false,
           }));
 
           // Prefetch the other type in background if not cached yet
-          const other: 'formula' | 'cask' = activeType === 'formula' ? 'cask' : 'formula';
+          const other: "formula" | "cask" =
+            activeType === "formula" ? "cask" : "formula";
           const hasOther = get().brewInfoByType[other];
           if (!hasOther) {
             (async () => {
               try {
                 const otherInfo = await invoke<BrewInfo>(
-                  other === 'formula' ? 'get_brew_info' : 'get_cask_info'
+                  other === "formula" ? "get_brew_info" : "get_cask_info"
                 );
                 set((s2) => ({
                   brewInfoByType: { ...s2.brewInfoByType, [other]: otherInfo },
-                  lastFetchByType: { ...s2.lastFetchByType, [other]: Date.now() }
+                  lastFetchByType: {
+                    ...s2.lastFetchByType,
+                    [other]: Date.now(),
+                  },
                 }));
               } catch {
                 // silent prefetch failure
@@ -169,51 +173,51 @@ export const useBrewStore = create<BrewStore>()(
             })();
           }
         } catch (error) {
-          set({ 
+          set({
             message: `Error loading brew info: ${error}`,
             loading: false,
-            isRefreshing: false
+            isRefreshing: false,
           });
         }
       },
-      
+
       searchPackages: async (query: string) => {
         if (!query.trim()) {
           set({ searchResults: [] });
           return;
         }
-        
+
         const { activeType } = get();
         set({ loading: true });
-        
+
         try {
           const results = await invoke<BrewPackage[]>(
-            activeType === 'formula' ? 'search_packages' : 'search_casks',
+            activeType === "formula" ? "search_packages" : "search_casks",
             { query }
           );
-          
+
           set({ searchResults: results, loading: false });
         } catch (error) {
-          set({ 
+          set({
             message: `Error searching packages: ${error}`,
-            loading: false 
+            loading: false,
           });
         }
       },
-      
+
       installPackage: async (packageName: string) => {
         const { activeType, activeTab } = get();
         set({ isRefreshing: true });
-        
+
         try {
           const result = await invoke<string>(
-            activeType === 'formula' ? 'install_package' : 'install_cask',
+            activeType === "formula" ? "install_package" : "install_cask",
             { packageName }
           );
-          
+
           set({ message: result });
-          
-          if (activeTab !== 'discover') {
+
+          if (activeTab !== "discover") {
             await get().loadBrewInfo();
           }
         } catch (error) {
@@ -222,20 +226,20 @@ export const useBrewStore = create<BrewStore>()(
           set({ isRefreshing: false });
         }
       },
-      
+
       uninstallPackage: async (packageName: string) => {
         const { activeType, activeTab } = get();
         set({ isRefreshing: true });
-        
+
         try {
           const result = await invoke<string>(
-            activeType === 'formula' ? 'uninstall_package' : 'uninstall_cask',
+            activeType === "formula" ? "uninstall_package" : "uninstall_cask",
             { packageName }
           );
-          
+
           set({ message: result });
-          
-          if (activeTab !== 'discover') {
+
+          if (activeTab !== "discover") {
             await get().loadBrewInfo();
           }
         } catch (error) {
@@ -244,20 +248,20 @@ export const useBrewStore = create<BrewStore>()(
           set({ isRefreshing: false });
         }
       },
-      
+
       updatePackage: async (packageName: string) => {
         const { activeType, activeTab } = get();
         set({ isRefreshing: true });
-        
+
         try {
           const result = await invoke<string>(
-            activeType === 'formula' ? 'update_package' : 'update_cask',
+            activeType === "formula" ? "update_package" : "update_cask",
             { packageName }
           );
-          
+
           set({ message: result });
-          
-          if (activeTab !== 'discover') {
+
+          if (activeTab !== "discover") {
             await get().loadBrewInfo();
           }
         } catch (error) {
@@ -266,19 +270,21 @@ export const useBrewStore = create<BrewStore>()(
           set({ isRefreshing: false });
         }
       },
-      
+
       updateAllPackages: async () => {
         const { activeType, activeTab } = get();
         set({ isRefreshing: true });
-        
+
         try {
           const result = await invoke<string>(
-            activeType === 'formula' ? 'update_all_packages' : 'update_all_casks'
+            activeType === "formula"
+              ? "update_all_packages"
+              : "update_all_casks"
           );
-          
+
           set({ message: result });
-          
-          if (activeTab !== 'discover') {
+
+          if (activeTab !== "discover") {
             await get().loadBrewInfo();
           }
         } catch (error) {
@@ -287,11 +293,9 @@ export const useBrewStore = create<BrewStore>()(
           set({ isRefreshing: false });
         }
       },
-      
-
     }),
     {
-      name: 'brewdeck-store',
+      name: "brewdeck-store",
       version: 1,
       storage: createJSONStorage(() => localStorage),
       // Persist only what’s useful across restarts
@@ -304,7 +308,7 @@ export const useBrewStore = create<BrewStore>()(
       // Reset activeType on app startup
       onRehydrateStorage: () => (state) => {
         if (state) {
-          state.activeType = 'formula';
+          state.activeType = "formula";
         }
       },
     }
