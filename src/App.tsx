@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { FiSearch, FiPackage, FiRefreshCw, FiGrid } from "react-icons/fi";
 import { useBrewStore } from "./stores/brewStore";
 import "./App.css";
@@ -198,40 +198,7 @@ function App() {
           <p className="text-lg text-muted-foreground">Loading your apps...</p>
         </div>
       ) : brewInfo ? (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-              <CardContent className="p-6 text-center">
-                <div className="text-3xl font-bold text-blue-600 mb-2">
-                  {brewInfo.packages.length}
-                </div>
-                <div className="text-sm font-medium text-blue-700">
-                  {activeType === "formula" ? "Formulae" : "Applications"}
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-              <CardContent className="p-6 text-center">
-                <div className="text-3xl font-bold text-green-600 mb-2">
-                  {brewInfo.packages.filter((pkg) => !pkg.outdated).length}
-                </div>
-                <div className="text-sm font-medium text-green-700">
-                  Up to Date
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-              <CardContent className="p-6 text-center">
-                <div className="text-3xl font-bold text-orange-600 mb-2">
-                  {brewInfo.packages.filter((pkg) => pkg.outdated).length}
-                </div>
-                <div className="text-sm font-medium text-orange-700">
-                  Need Updates
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
+        <div className="space-y-8">
           {brewInfo.packages.length > 0 ? (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
@@ -300,7 +267,7 @@ function App() {
               </button>
             </div>
           )}
-        </>
+        </div>
       ) : (
         <div className="text-center py-16">
           <Package className="w-16 h-16 mx-auto mb-6 text-muted-foreground" />
