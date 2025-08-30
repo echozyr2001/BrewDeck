@@ -30,8 +30,11 @@ export function AppSidebar({
     <Sidebar className="w-64 flex-shrink-0 bg-sidebar border-r border-sidebar-border flex flex-col">
       <SidebarHeader className="p-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+            <Package className="w-4 h-4 text-primary-foreground" />
+          </div>
           <div>
-            <h1 className="text-lg font-serif font-semibold text-sidebar-foreground">
+            <h1 className="text-lg font-semibold text-sidebar-foreground">
               BrewDeck
             </h1>
             <p className="text-xs text-muted-foreground">
@@ -40,14 +43,16 @@ export function AppSidebar({
           </div>
         </div>
       </SidebarHeader>
-      <SidebarContent className="flex-1 p-4 space-y-4">
-        <div className="space-y-1">
+
+      <SidebarContent className="flex-1 p-4 space-y-6">
+        <div className="space-y-2">
           <Button
             onClick={() => onTabChange("installed")}
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+            variant={activeTab === "installed" ? "default" : "ghost"}
+            className={`w-full justify-start gap-3 h-10 ${
               activeTab === "installed"
-                ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             }`}
           >
             <Package className="w-4 h-4" />
@@ -59,10 +64,11 @@ export function AppSidebar({
 
           <Button
             onClick={() => onTabChange("search")}
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+            variant={activeTab === "search" ? "default" : "ghost"}
+            className={`w-full justify-start gap-3 h-10 ${
               activeTab === "search"
-                ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             }`}
           >
             <Search className="w-4 h-4" />
@@ -71,23 +77,25 @@ export function AppSidebar({
 
           <Button
             onClick={() => onTabChange("discover")}
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+            variant={activeTab === "discover" ? "default" : "ghost"}
+            className={`w-full justify-start gap-3 h-10 ${
               activeTab === "discover"
-                ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             }`}
           >
             <FiGrid className="w-4 h-4" />
             <span>Discover</span>
           </Button>
         </div>
+
         <div className="space-y-3">
           <div className="px-3">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Discover
+              Categories
             </h3>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1">
             {categories.map((category) => (
               <button
                 key={category.id}
@@ -96,9 +104,9 @@ export function AppSidebar({
                   onSearchQueryChange(category.id.toLowerCase());
                   onSearch();
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-sidebar-foreground hover:bg-sidebar-accent/50 group"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group"
               >
-                <div className="w-6 h-6 rounded-md bg-accent/10 flex items-center justify-center group-hover:bg-accent/20 transition-colors text-sm">
+                <div className="w-6 h-6 rounded-md bg-muted flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors text-sm">
                   {getCategoryIcon(category.id)}
                 </div>
                 <div className="flex-1 text-left">
