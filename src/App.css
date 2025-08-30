@@ -38,6 +38,16 @@
   --sidebar-accent-foreground: oklch(0.15 0 0); /* Deep gray sidebar accent text */
   --sidebar-border: oklch(0.85 0.02 115); /* Light green-tinted sidebar border */
   --sidebar-ring: oklch(0.58 0.04 160 / 0.3); /* Muted teal-green sidebar ring */
+
+  /* Theme-specific semantic colors for easier maintenance */
+  --theme-sage: oklch(0.75 0.03 140); /* Light sage green #A7C1A8 */
+  --theme-sage-muted: oklch(0.75 0.03 140 / 0.1); /* Light sage green with transparency */
+  --theme-teal: oklch(0.58 0.04 160); /* Muted teal-green #819A91 */
+  --theme-teal-muted: oklch(0.58 0.04 160 / 0.1); /* Muted teal-green with transparency */
+  --theme-beige: oklch(0.88 0.02 110); /* Pale green-beige #D1D8BE */
+  --theme-cream: oklch(0.95 0.01 120); /* Light cream #EEEFE0 */
+  --theme-gradient-start: var(--theme-beige);
+  --theme-gradient-end: var(--theme-sage);
 }
 
 .dark {
@@ -115,6 +125,14 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Theme-specific color mappings */
+  --color-theme-sage: var(--theme-sage);
+  --color-theme-sage-muted: var(--theme-sage-muted);
+  --color-theme-teal: var(--theme-teal);
+  --color-theme-teal-muted: var(--theme-teal-muted);
+  --color-theme-beige: var(--theme-beige);
+  --color-theme-cream: var(--theme-cream);
 }
 
 @layer base {
