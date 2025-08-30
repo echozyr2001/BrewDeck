@@ -75,8 +75,8 @@ export const AppIcon = ({ packageName, description }: AppIconProps) => {
 
   if (iconState === "failed") {
     return (
-      <div className="w-16 h-16 bg-gradient-to-br from-indigo-100 via-purple-100 to-blue-100 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-xl shadow-indigo-500/20 border border-white/40">
-        <FiPackage className="w-8 h-8 text-indigo-500" />
+      <div className="w-16 h-16 bg-gradient-to-br from-[#D1D8BE] via-[#A7C1A8] to-[#819A91] rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-[#819A91]/15 border border-white/40">
+        <FiPackage className="w-8 h-8 text-[#819A91]" />
       </div>
     );
   }
@@ -84,12 +84,12 @@ export const AppIcon = ({ packageName, description }: AppIconProps) => {
   return (
     <div className="relative flex-shrink-0">
       {iconState === "loading" && (
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-200 via-purple-200 to-blue-200 animate-pulse shadow-xl shadow-indigo-500/20"></div>
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#D1D8BE] via-[#A7C1A8] to-[#819A91] animate-pulse shadow-lg shadow-[#819A91]/15"></div>
       )}
       <img
         src={currentSrc}
         alt={`${packageName} icon`}
-        className={`w-16 h-16 rounded-2xl object-cover bg-white shadow-xl shadow-indigo-500/20 border border-white/40 ${
+        className={`w-16 h-16 rounded-2xl object-cover bg-white shadow-lg shadow-[#819A91]/15 border border-white/40 ${
           iconState === "loading" ? "opacity-0" : ""
         }`}
         onLoad={handleImageLoad}
