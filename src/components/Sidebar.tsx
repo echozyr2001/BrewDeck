@@ -89,6 +89,17 @@ export function AppSidebar({
           </Button>
         </div>
 
+        <div className="px-3 py-2 bg-muted/30 rounded-lg">
+          <h4 className="text-xs font-medium text-muted-foreground mb-2">
+            Shortcuts
+          </h4>
+          <div className="space-y-1 text-xs text-muted-foreground">
+            <div>⌘1/2 - Switch package type</div>
+            <div>⌘⇧T - Toggle type</div>
+            <div>⌘B - Toggle sidebar</div>
+          </div>
+        </div>
+
         <div className="space-y-3">
           <div className="px-3">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">

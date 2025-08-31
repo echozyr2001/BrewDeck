@@ -89,6 +89,14 @@ function App() {
               searchPackages(searchQuery);
             }
           }}
+          formulaeCount={
+            searchResults.filter((pkg) => activeType === "formula").length ||
+            undefined
+          }
+          casksCount={
+            searchResults.filter((pkg) => activeType === "cask").length ||
+            undefined
+          }
         />
 
         <Card className="border-border bg-card">
@@ -185,7 +193,12 @@ function App() {
         </p>
       </div>
 
-      <PackageTypeToggle activeType={activeType} onTypeChange={setActiveType} />
+      <PackageTypeToggle
+        activeType={activeType}
+        onTypeChange={setActiveType}
+        formulaeCount={brewInfo?.total_installed}
+        casksCount={brewInfo?.total_installed}
+      />
 
       {loading ? (
         <div className="text-center py-16">
@@ -241,7 +254,7 @@ function App() {
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <FiPackage size={24} className="text-primary" />
               </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">
+              <h3 className="text-lg font-semibold mb-2">
                 No {activeType === "formula" ? "formulae" : "applications"}{" "}
                 installed
               </h3>
@@ -267,7 +280,7 @@ function App() {
       ) : (
         <div className="text-center py-16">
           <Package className="w-16 h-16 mx-auto mb-6 text-muted-foreground" />
-          <h3 className="text-2xl font-semibold mb-3">No Apps Found</h3>
+          <h3 className="text-2xl font-bold mb-3">No Apps Found</h3>
           <p className="text-lg text-muted-foreground mb-6">
             Make sure Homebrew is installed and try refreshing.
           </p>
