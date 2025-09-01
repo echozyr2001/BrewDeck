@@ -15,156 +15,403 @@ export interface BrewPackage {
   analytics: number;
 }
 
+export interface PackageAnalytics {
+  downloads365d: number;
+  popularity: number;
+  rating?: number;
+}
+
+export interface PackageWarning {
+  type: "security" | "compatibility" | "deprecated" | "experimental";
+  message: string;
+  severity: "low" | "medium" | "high";
+}
+
+export interface EnhancedBrewPackage extends BrewPackage {
+  category?: string;
+  warnings?: PackageWarning[];
+  installSize?: number;
+  lastUpdated?: Date;
+  enhancedAnalytics?: PackageAnalytics;
+}
+
 export interface BrewInfo {
-  packages: BrewPackage[];
+  packages: EnhancedBrewPackage[];
   total_installed: number;
   total_outdated: number;
 }
 
+export interface PackageOperation {
+  id: string;
+  type: "install" | "uninstall" | "update";
+  packageName: string;
+  packageType: "formula" | "cask";
+  status: "pending" | "running" | "completed" | "failed";
+  progress?: number;
+  message?: string;
+  startTime: Date;
+  endTime?: Date;
+}
+
+export interface LoadingState {
+  formulae: boolean;
+  casks: boolean;
+  search: boolean;
+  operations: Record<string, boolean>; // operationId -> loading
+}
+
+export interface CacheState {
+  formulae: {
+    data: BrewInfo | null;
+    lastFetch: number | null;
+    searchResults: EnhancedBrewPackage[];
+    searchQuery: string;
+  };
+  casks: {
+    data: BrewInfo | null;
+    lastFetch: number | null;
+    searchResults: EnhancedBrewPackage[];
+    searchQuery: string;
+  };
+  timeout: number; // 5 minutes
+}
+
 interface BrewStore {
-  // State
-  brewInfo: BrewInfo | null;
-  // Per-type caches so switches are instant
-  brewInfoByType: Record<"formula" | "cask", BrewInfo | null>;
-  lastFetchByType: Record<"formula" | "cask", number | null>;
-  isRefreshing: boolean;
+  // Data - Separated by package type
+  formulae: Record<string, EnhancedBrewPackage>;
+  casks: Record<string, EnhancedBrewPackage>;
 
-  searchResults: BrewPackage[];
-  loading: boolean; // cold load only
-  message: string;
-  activeTab: "installed" | "search" | "discover";
-  activeType: "formula" | "cask";
+  // UI State
+  activeView: "discover" | "installed" | "search" | "updates";
+  activeTab: "formula" | "cask"; // Tab within each view
   searchQuery: string;
+  selectedCategory?: string;
 
-  // Cache
-  cacheTimeout: number; // 5 minutes
+  // Operation State
+  loading: LoadingState;
+  operations: Record<string, PackageOperation>;
+  message: string;
+
+  // Cache State
+  cache: CacheState;
 
   // Actions
-  setActiveTab: (tab: "installed" | "search" | "discover") => void;
-  setActiveType: (type: "formula" | "cask") => void;
+  setActiveView: (
+    view: "discover" | "installed" | "search" | "updates"
+  ) => void;
+  setActiveTab: (tab: "formula" | "cask") => void;
   setSearchQuery: (query: string) => void;
+  setSelectedCategory: (category?: string) => void;
   setMessage: (message: string) => void;
   clearMessage: () => void;
 
   // Async actions
-  loadBrewInfo: () => Promise<void>;
-  searchPackages: (query: string) => Promise<void>;
-  installPackage: (packageName: string) => Promise<void>;
-  uninstallPackage: (packageName: string) => Promise<void>;
-  updatePackage: (packageName: string) => Promise<void>;
-  updateAllPackages: () => Promise<void>;
+  loadPackages: (packageType: "formula" | "cask") => Promise<void>;
+  searchPackages: (
+    query: string,
+    packageType: "formula" | "cask"
+  ) => Promise<void>;
+  installPackage: (
+    packageName: string,
+    packageType: "formula" | "cask"
+  ) => Promise<void>;
+  uninstallPackage: (
+    packageName: string,
+    packageType: "formula" | "cask"
+  ) => Promise<void>;
+  updatePackage: (
+    packageName: string,
+    packageType: "formula" | "cask"
+  ) => Promise<void>;
+  updateAllPackages: (packageType: "formula" | "cask") => Promise<void>;
+
+  // Operation management
+  addOperation: (
+    operation: Omit<PackageOperation, "id" | "startTime">
+  ) => string;
+  updateOperation: (id: string, updates: Partial<PackageOperation>) => void;
+  removeOperation: (id: string) => void;
+  getActiveOperations: () => PackageOperation[];
 
   // Cache management
-  shouldRefetch: (type: "formula" | "cask") => boolean;
-  clearCache: (type?: "formula" | "cask") => void;
+  shouldRefetch: (packageType: "formula" | "cask") => boolean;
+  clearCache: (packageType?: "formula" | "cask") => void;
+
+  // Helper methods
+  getPackagesByType: (packageType: "formula" | "cask") => EnhancedBrewPackage[];
+  getInstalledPackages: (
+    packageType: "formula" | "cask"
+  ) => EnhancedBrewPackage[];
+  getOutdatedPackages: (
+    packageType: "formula" | "cask"
+  ) => EnhancedBrewPackage[];
+  getSearchResults: (packageType: "formula" | "cask") => EnhancedBrewPackage[];
 }
 
 export const useBrewStore = create<BrewStore>()(
   persist(
     (set, get) => ({
       // Initial state
-      brewInfo: null,
-      brewInfoByType: { formula: null, cask: null },
-      lastFetchByType: { formula: null, cask: null },
-      isRefreshing: false,
+      formulae: {},
+      casks: {},
 
-      searchResults: [],
-      loading: false,
-      message: "",
-      activeTab: "installed",
-      activeType: "formula",
+      // UI State
+      activeView: "discover",
+      activeTab: "formula",
       searchQuery: "",
-      cacheTimeout: 5 * 60 * 1000, // 5 minutes
+      selectedCategory: undefined,
+
+      // Operation State
+      loading: {
+        formulae: false,
+        casks: false,
+        search: false,
+        operations: {},
+      },
+      operations: {},
+      message: "",
+
+      // Cache State
+      cache: {
+        formulae: {
+          data: null,
+          lastFetch: null,
+          searchResults: [],
+          searchQuery: "",
+        },
+        casks: {
+          data: null,
+          lastFetch: null,
+          searchResults: [],
+          searchQuery: "",
+        },
+        timeout: 5 * 60 * 1000, // 5 minutes
+      },
 
       // State setters
-      setActiveTab: (tab) => {
-        set({ activeTab: tab });
-        if (tab !== "discover") {
-          get().loadBrewInfo();
+      setActiveView: (view) => {
+        set({ activeView: view });
+        // Load data for the new view if needed
+        const { activeTab } = get();
+        if (view !== "discover") {
+          get().loadPackages(activeTab);
         }
       },
 
-      setActiveType: (type) => {
-        // Switch type and immediately expose cached data if present
-        const { brewInfoByType } = get();
-        set({ activeType: type, brewInfo: brewInfoByType[type] });
-        if (get().activeTab !== "discover") {
-          get().loadBrewInfo();
+      setActiveTab: (tab) => {
+        set({ activeTab: tab });
+        // Load data for the new tab if needed
+        const { activeView } = get();
+        if (activeView !== "discover") {
+          get().loadPackages(tab);
         }
       },
 
       setSearchQuery: (query) => set({ searchQuery: query }),
+
+      setSelectedCategory: (category) => set({ selectedCategory: category }),
 
       setMessage: (message) => set({ message }),
 
       clearMessage: () => set({ message: "" }),
 
       // Cache management
-      shouldRefetch: (type) => {
-        const { lastFetchByType, cacheTimeout } = get();
-        const ts = lastFetchByType[type];
-        return !ts || Date.now() - ts > cacheTimeout;
+      shouldRefetch: (packageType) => {
+        const { cache } = get();
+        const cacheKey = packageType === "formula" ? "formulae" : "casks";
+        const cacheData = cache[cacheKey];
+        return (
+          !cacheData.lastFetch ||
+          Date.now() - cacheData.lastFetch > cache.timeout
+        );
       },
 
-      clearCache: (type) => {
-        if (!type) {
-          set({ lastFetchByType: { formula: null, cask: null } });
+      clearCache: (packageType) => {
+        if (!packageType) {
+          set((state) => ({
+            cache: {
+              ...state.cache,
+              formulae: {
+                ...state.cache.formulae,
+                data: null,
+                lastFetch: null,
+              },
+              casks: { ...state.cache.casks, data: null, lastFetch: null },
+            },
+          }));
         } else {
-          set((s) => ({
-            lastFetchByType: { ...s.lastFetchByType, [type]: null },
+          const cacheKey = packageType === "formula" ? "formulae" : "casks";
+          set((state) => ({
+            cache: {
+              ...state.cache,
+              [cacheKey]: {
+                ...state.cache[cacheKey],
+                data: null,
+                lastFetch: null,
+              },
+            },
           }));
         }
       },
 
-      // Async actions
-      loadBrewInfo: async () => {
-        const { activeType, brewInfoByType, shouldRefetch } = get();
-        const cached = brewInfoByType[activeType];
+      // Operation management
+      addOperation: (operation) => {
+        const id = `${operation.type}-${operation.packageName}-${Date.now()}`;
+        const fullOperation: PackageOperation = {
+          ...operation,
+          id,
+          startTime: new Date(),
+        };
 
-        // If we have cached data (even from disk), expose it immediately
+        set((state) => ({
+          operations: { ...state.operations, [id]: fullOperation },
+          loading: {
+            ...state.loading,
+            operations: { ...state.loading.operations, [id]: true },
+          },
+        }));
+
+        return id;
+      },
+
+      updateOperation: (id, updates) => {
+        set((state) => ({
+          operations: {
+            ...state.operations,
+            [id]: { ...state.operations[id], ...updates },
+          },
+          loading: {
+            ...state.loading,
+            operations: {
+              ...state.loading.operations,
+              [id]: updates.status === "running",
+            },
+          },
+        }));
+      },
+
+      removeOperation: (id) => {
+        set((state) => {
+          const { [id]: removed, ...remainingOperations } = state.operations;
+          const { [id]: removedLoading, ...remainingLoading } =
+            state.loading.operations;
+
+          return {
+            operations: remainingOperations,
+            loading: {
+              ...state.loading,
+              operations: remainingLoading,
+            },
+          };
+        });
+      },
+
+      getActiveOperations: () => {
+        const { operations } = get();
+        return Object.values(operations).filter(
+          (op) => op.status === "pending" || op.status === "running"
+        );
+      },
+
+      // Helper methods
+      getPackagesByType: (packageType) => {
+        const state = get();
+        const storeKey = packageType === "formula" ? "formulae" : "casks";
+        return Object.values(state[storeKey]);
+      },
+
+      getInstalledPackages: (packageType) => {
+        const state = get();
+        const storeKey = packageType === "formula" ? "formulae" : "casks";
+        return Object.values(state[storeKey]).filter((pkg) => pkg.installed);
+      },
+
+      getOutdatedPackages: (packageType) => {
+        const state = get();
+        const storeKey = packageType === "formula" ? "formulae" : "casks";
+        return Object.values(state[storeKey]).filter((pkg) => pkg.outdated);
+      },
+
+      getSearchResults: (packageType) => {
+        const { cache } = get();
+        const cacheKey = packageType === "formula" ? "formulae" : "casks";
+        return cache[cacheKey].searchResults;
+      },
+
+      // Async actions
+      loadPackages: async (packageType) => {
+        const { cache, shouldRefetch } = get();
+        const cacheKey = packageType === "formula" ? "formulae" : "casks";
+        const storeKey = packageType === "formula" ? "formulae" : "casks";
+        const cached = cache[cacheKey].data;
+
+        // If we have cached data, expose it immediately
         if (cached) {
-          set({ brewInfo: cached });
+          const packages = cached.packages.reduce((acc, pkg) => {
+            acc[pkg.name] = pkg;
+            return acc;
+          }, {} as Record<string, EnhancedBrewPackage>);
+
+          set((state) => ({
+            [storeKey]: packages,
+          }));
         }
 
-        const needsRefetch = shouldRefetch(activeType);
+        const needsRefetch = shouldRefetch(packageType);
 
-        // Decide user-visible loading vs background refresh
+        // Set loading state
         if (!cached) {
-          set({ loading: true });
-        } else if (needsRefetch) {
-          set({ isRefreshing: true });
-        } else {
+          set((state) => ({
+            loading: { ...state.loading, [storeKey]: true },
+          }));
+        } else if (!needsRefetch) {
           // Fresh cache, nothing to do
           return;
         }
 
         try {
           const info = await invoke<BrewInfo>(
-            activeType === "formula" ? "get_brew_info" : "get_cask_info"
+            packageType === "formula" ? "get_brew_info" : "get_cask_info"
           );
-          set((s) => ({
-            brewInfo: info,
-            brewInfoByType: { ...s.brewInfoByType, [activeType]: info },
-            lastFetchByType: { ...s.lastFetchByType, [activeType]: Date.now() },
-            loading: false,
-            isRefreshing: false,
+
+          // Convert array to object for easier access
+          const packages = info.packages.reduce((acc, pkg) => {
+            acc[pkg.name] = pkg;
+            return acc;
+          }, {} as Record<string, EnhancedBrewPackage>);
+
+          set((state) => ({
+            [storeKey]: packages,
+            cache: {
+              ...state.cache,
+              [cacheKey]: {
+                ...state.cache[cacheKey],
+                data: info,
+                lastFetch: Date.now(),
+              },
+            },
+            loading: { ...state.loading, [storeKey]: false },
           }));
 
           // Prefetch the other type in background if not cached yet
-          const other: "formula" | "cask" =
-            activeType === "formula" ? "cask" : "formula";
-          const hasOther = get().brewInfoByType[other];
+          const otherType: "formula" | "cask" =
+            packageType === "formula" ? "cask" : "formula";
+          const otherCacheKey = otherType === "formula" ? "formulae" : "casks";
+          const hasOther = get().cache[otherCacheKey].data;
           if (!hasOther) {
             (async () => {
               try {
                 const otherInfo = await invoke<BrewInfo>(
-                  other === "formula" ? "get_brew_info" : "get_cask_info"
+                  otherType === "formula" ? "get_brew_info" : "get_cask_info"
                 );
-                set((s2) => ({
-                  brewInfoByType: { ...s2.brewInfoByType, [other]: otherInfo },
-                  lastFetchByType: {
-                    ...s2.lastFetchByType,
-                    [other]: Date.now(),
+                set((state) => ({
+                  cache: {
+                    ...state.cache,
+                    [otherCacheKey]: {
+                      ...state.cache[otherCacheKey],
+                      data: otherInfo,
+                      lastFetch: Date.now(),
+                    },
                   },
                 }));
               } catch {
@@ -173,142 +420,318 @@ export const useBrewStore = create<BrewStore>()(
             })();
           }
         } catch (error) {
-          set({
-            message: `Error loading brew info: ${error}`,
-            loading: false,
-            isRefreshing: false,
-          });
+          set((state) => ({
+            message: `Error loading ${packageType} packages: ${error}`,
+            loading: { ...state.loading, [storeKey]: false },
+          }));
         }
       },
 
-      searchPackages: async (query: string) => {
+      searchPackages: async (
+        query: string,
+        packageType: "formula" | "cask"
+      ) => {
+        const cacheKey = packageType === "formula" ? "formulae" : "casks";
+
         if (!query.trim()) {
-          set({ searchResults: [] });
+          set((state) => ({
+            cache: {
+              ...state.cache,
+              [cacheKey]: {
+                ...state.cache[cacheKey],
+                searchResults: [],
+                searchQuery: "",
+              },
+            },
+          }));
           return;
         }
 
-        const { activeType } = get();
-        set({ loading: true });
+        set((state) => ({
+          loading: { ...state.loading, search: true },
+          cache: {
+            ...state.cache,
+            [cacheKey]: {
+              ...state.cache[cacheKey],
+              searchQuery: query,
+            },
+          },
+        }));
 
         try {
-          const results = await invoke<BrewPackage[]>(
-            activeType === "formula" ? "search_packages" : "search_casks",
+          const results = await invoke<EnhancedBrewPackage[]>(
+            packageType === "formula" ? "search_packages" : "search_casks",
             { query }
           );
 
-          set({ searchResults: results, loading: false });
+          set((state) => ({
+            cache: {
+              ...state.cache,
+              [cacheKey]: {
+                ...state.cache[cacheKey],
+                searchResults: results,
+              },
+            },
+            loading: { ...state.loading, search: false },
+          }));
         } catch (error) {
-          set({
-            message: `Error searching packages: ${error}`,
-            loading: false,
+          set((state) => ({
+            message: `Error searching ${packageType} packages: ${error}`,
+            loading: { ...state.loading, search: false },
+          }));
+        }
+      },
+
+      installPackage: async (
+        packageName: string,
+        packageType: "formula" | "cask"
+      ) => {
+        const {
+          addOperation,
+          updateOperation,
+          removeOperation,
+          activeView,
+          loadPackages,
+        } = get();
+
+        const operationId = addOperation({
+          type: "install",
+          packageName,
+          packageType,
+          status: "pending",
+        });
+
+        try {
+          updateOperation(operationId, { status: "running" });
+
+          const result = await invoke<string>(
+            packageType === "formula" ? "install_package" : "install_cask",
+            { packageName }
+          );
+
+          updateOperation(operationId, {
+            status: "completed",
+            message: result,
+            endTime: new Date(),
           });
-        }
-      },
-
-      installPackage: async (packageName: string) => {
-        const { activeType, activeTab } = get();
-        set({ isRefreshing: true });
-
-        try {
-          const result = await invoke<string>(
-            activeType === "formula" ? "install_package" : "install_cask",
-            { packageName }
-          );
 
           set({ message: result });
 
-          if (activeTab !== "discover") {
-            await get().loadBrewInfo();
+          // Refresh data if we're not in discover view
+          if (activeView !== "discover") {
+            await loadPackages(packageType);
           }
+
+          // Remove completed operation after a delay
+          setTimeout(() => removeOperation(operationId), 5000);
         } catch (error) {
-          set({ message: `Error installing package: ${error}` });
-        } finally {
-          set({ isRefreshing: false });
+          const errorMessage = `Error installing package: ${error}`;
+          updateOperation(operationId, {
+            status: "failed",
+            message: errorMessage,
+            endTime: new Date(),
+          });
+          set({ message: errorMessage });
+
+          // Remove failed operation after a delay
+          setTimeout(() => removeOperation(operationId), 10000);
         }
       },
 
-      uninstallPackage: async (packageName: string) => {
-        const { activeType, activeTab } = get();
-        set({ isRefreshing: true });
+      uninstallPackage: async (
+        packageName: string,
+        packageType: "formula" | "cask"
+      ) => {
+        const {
+          addOperation,
+          updateOperation,
+          removeOperation,
+          activeView,
+          loadPackages,
+        } = get();
+
+        const operationId = addOperation({
+          type: "uninstall",
+          packageName,
+          packageType,
+          status: "pending",
+        });
 
         try {
+          updateOperation(operationId, { status: "running" });
+
           const result = await invoke<string>(
-            activeType === "formula" ? "uninstall_package" : "uninstall_cask",
+            packageType === "formula" ? "uninstall_package" : "uninstall_cask",
             { packageName }
           );
 
+          updateOperation(operationId, {
+            status: "completed",
+            message: result,
+            endTime: new Date(),
+          });
+
           set({ message: result });
 
-          if (activeTab !== "discover") {
-            await get().loadBrewInfo();
+          // Refresh data if we're not in discover view
+          if (activeView !== "discover") {
+            await loadPackages(packageType);
           }
+
+          // Remove completed operation after a delay
+          setTimeout(() => removeOperation(operationId), 5000);
         } catch (error) {
-          set({ message: `Error uninstalling package: ${error}` });
-        } finally {
-          set({ isRefreshing: false });
+          const errorMessage = `Error uninstalling package: ${error}`;
+          updateOperation(operationId, {
+            status: "failed",
+            message: errorMessage,
+            endTime: new Date(),
+          });
+          set({ message: errorMessage });
+
+          // Remove failed operation after a delay
+          setTimeout(() => removeOperation(operationId), 10000);
         }
       },
 
-      updatePackage: async (packageName: string) => {
-        const { activeType, activeTab } = get();
-        set({ isRefreshing: true });
+      updatePackage: async (
+        packageName: string,
+        packageType: "formula" | "cask"
+      ) => {
+        const {
+          addOperation,
+          updateOperation,
+          removeOperation,
+          activeView,
+          loadPackages,
+        } = get();
+
+        const operationId = addOperation({
+          type: "update",
+          packageName,
+          packageType,
+          status: "pending",
+        });
 
         try {
+          updateOperation(operationId, { status: "running" });
+
           const result = await invoke<string>(
-            activeType === "formula" ? "update_package" : "update_cask",
+            packageType === "formula" ? "update_package" : "update_cask",
             { packageName }
           );
 
+          updateOperation(operationId, {
+            status: "completed",
+            message: result,
+            endTime: new Date(),
+          });
+
           set({ message: result });
 
-          if (activeTab !== "discover") {
-            await get().loadBrewInfo();
+          // Refresh data if we're not in discover view
+          if (activeView !== "discover") {
+            await loadPackages(packageType);
           }
+
+          // Remove completed operation after a delay
+          setTimeout(() => removeOperation(operationId), 5000);
         } catch (error) {
-          set({ message: `Error updating package: ${error}` });
-        } finally {
-          set({ isRefreshing: false });
+          const errorMessage = `Error updating package: ${error}`;
+          updateOperation(operationId, {
+            status: "failed",
+            message: errorMessage,
+            endTime: new Date(),
+          });
+          set({ message: errorMessage });
+
+          // Remove failed operation after a delay
+          setTimeout(() => removeOperation(operationId), 10000);
         }
       },
 
-      updateAllPackages: async () => {
-        const { activeType, activeTab } = get();
-        set({ isRefreshing: true });
+      updateAllPackages: async (packageType: "formula" | "cask") => {
+        const {
+          addOperation,
+          updateOperation,
+          removeOperation,
+          activeView,
+          loadPackages,
+        } = get();
+
+        const operationId = addOperation({
+          type: "update",
+          packageName: `all-${packageType}`,
+          packageType,
+          status: "pending",
+        });
 
         try {
+          updateOperation(operationId, { status: "running" });
+
           const result = await invoke<string>(
-            activeType === "formula"
+            packageType === "formula"
               ? "update_all_packages"
               : "update_all_casks"
           );
 
+          updateOperation(operationId, {
+            status: "completed",
+            message: result,
+            endTime: new Date(),
+          });
+
           set({ message: result });
 
-          if (activeTab !== "discover") {
-            await get().loadBrewInfo();
+          // Refresh data if we're not in discover view
+          if (activeView !== "discover") {
+            await loadPackages(packageType);
           }
+
+          // Remove completed operation after a delay
+          setTimeout(() => removeOperation(operationId), 5000);
         } catch (error) {
-          set({ message: `Error updating all packages: ${error}` });
-        } finally {
-          set({ isRefreshing: false });
+          const errorMessage = `Error updating all ${packageType} packages: ${error}`;
+          updateOperation(operationId, {
+            status: "failed",
+            message: errorMessage,
+            endTime: new Date(),
+          });
+          set({ message: errorMessage });
+
+          // Remove failed operation after a delay
+          setTimeout(() => removeOperation(operationId), 10000);
         }
       },
     }),
     {
       name: "brewdeck-store",
-      version: 1,
+      version: 2, // Increment version due to breaking changes
       storage: createJSONStorage(() => localStorage),
-      // Persist only what’s useful across restarts
+      // Persist only what's useful across restarts
       partialize: (state) => ({
-        brewInfoByType: state.brewInfoByType,
-        lastFetchByType: state.lastFetchByType,
-        activeType: state.activeType,
-        cacheTimeout: state.cacheTimeout,
+        formulae: state.formulae,
+        casks: state.casks,
+        cache: state.cache,
+        activeView: state.activeView,
+        activeTab: state.activeTab,
+        selectedCategory: state.selectedCategory,
       }),
-      // Reset activeType on app startup
+      // Reset to safe defaults on app startup
       onRehydrateStorage: () => (state) => {
         if (state) {
-          state.activeType = "formula";
+          // Reset UI state to safe defaults
+          state.activeView = "discover";
+          state.activeTab = "formula";
+          state.loading = {
+            formulae: false,
+            casks: false,
+            search: false,
+            operations: {},
+          };
+          state.operations = {};
+          state.message = "";
+          state.searchQuery = "";
         }
       },
     }
