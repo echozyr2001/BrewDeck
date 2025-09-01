@@ -5,14 +5,7 @@ import { FiSearch, FiPackage, FiRefreshCw, FiGrid } from "react-icons/fi";
 import { useBrewStore } from "./stores/brewStore";
 import "./App.css";
 import { Button } from "./components/ui/button";
-import {
-  ChevronDown,
-  Filter,
-  Home,
-  Package,
-  RefreshCw,
-  Search,
-} from "lucide-react";
+import { ChevronDown, Filter, Home, RefreshCw, Search } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,37 +24,39 @@ import { categories } from "./data/categories";
 function App() {
   // Zustand store hooks with selective subscriptions
   const {
-    brewInfo,
-    searchResults,
     loading,
     message,
+    activeView,
     activeTab,
-    activeType,
     searchQuery,
+    setActiveView,
     setActiveTab,
-    setActiveType,
     setSearchQuery,
     clearMessage,
-    loadBrewInfo,
+    loadPackages,
     searchPackages,
     installPackage,
     uninstallPackage,
     updatePackage,
     updateAllPackages,
+    getInstalledPackages,
+    getOutdatedPackages,
+    getSearchResults,
+    clearCache,
   } = useBrewStore();
 
   // Load initial data
   useEffect(() => {
-    if (activeTab !== "discover") {
-      loadBrewInfo();
+    if (activeView !== "discover") {
+      loadPackages(activeTab);
     }
-  }, []);
+  }, [activeView, activeTab]);
 
   const handleSearch = () => {
-    searchPackages(searchQuery);
+    searchPackages(searchQuery, activeTab);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       handleSearch();
     }
@@ -81,22 +76,14 @@ function App() {
         </div>
 
         <PackageTypeToggle
-          activeType={activeType}
+          activeType={activeTab}
           onTypeChange={(type) => {
-            setActiveType(type);
+            setActiveTab(type);
             // Clear search results when switching types
             if (searchQuery) {
-              searchPackages(searchQuery);
+              searchPackages(searchQuery, type);
             }
           }}
-          formulaeCount={
-            searchResults.filter((pkg) => activeType === "formula").length ||
-            undefined
-          }
-          casksCount={
-            searchResults.filter((pkg) => activeType === "cask").length ||
-            undefined
-          }
         />
 
         <Card className="border-border bg-card">
@@ -106,21 +93,21 @@ function App() {
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   placeholder={`Search for ${
-                    activeType === "formula" ? "packages" : "applications"
+                    activeTab === "formula" ? "packages" : "applications"
                   }...`}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={handleKeyPress}
+                  onKeyDown={handleKeyDown}
                   className="pl-12 h-12 text-base border-border bg-background"
                 />
               </div>
               <Button
                 onClick={handleSearch}
-                disabled={loading}
+                disabled={loading.search}
                 size="lg"
                 className="h-12 px-8 bg-primary text-primary-foreground hover:bg-primary/90"
               >
-                {loading ? (
+                {loading.search ? (
                   <RefreshCw className="w-5 h-5 animate-spin mr-2" />
                 ) : (
                   <Search className="w-5 h-5 mr-2" />
@@ -132,28 +119,28 @@ function App() {
         </Card>
       </div>
 
-      {loading ? (
+      {loading.search ? (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {Array.from({ length: 4 }).map((_, index) => (
             <PackageCardSkeleton key={index} />
           ))}
         </div>
-      ) : searchResults.length > 0 ? (
+      ) : getSearchResults(activeTab).length > 0 ? (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {searchResults.map((pkg) => (
+          {getSearchResults(activeTab).map((pkg) => (
             <PackageCard
               key={pkg.name}
               pkg={pkg}
               isSearchResult={true}
-              activeTab={activeTab}
-              loading={loading}
-              onInstall={installPackage}
-              onUninstall={uninstallPackage}
-              onUpdate={updatePackage}
+              activeTab={activeView}
+              loading={loading.search}
+              onInstall={(name) => installPackage(name, activeTab)}
+              onUninstall={(name) => uninstallPackage(name, activeTab)}
+              onUpdate={(name) => updatePackage(name, activeTab)}
             />
           ))}
         </div>
-      ) : searchQuery && !loading ? (
+      ) : searchQuery && !loading.search ? (
         <div className="text-center py-16">
           <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
             <FiSearch size={24} className="text-muted-foreground" />
@@ -193,103 +180,78 @@ function App() {
         </p>
       </div>
 
-      <PackageTypeToggle
-        activeType={activeType}
-        onTypeChange={setActiveType}
-        formulaeCount={brewInfo?.total_installed}
-        casksCount={brewInfo?.total_installed}
-      />
+      <PackageTypeToggle activeType={activeTab} onTypeChange={setActiveTab} />
 
-      {loading ? (
+      {(activeTab === "formula" ? loading.formulae : loading.casks) ? (
         <div className="text-center py-16">
           <RefreshCw className="w-12 h-12 animate-spin mx-auto mb-6 text-muted-foreground" />
           <p className="text-lg text-muted-foreground">Loading your apps...</p>
         </div>
-      ) : brewInfo ? (
+      ) : getInstalledPackages(activeTab).length > 0 ? (
         <div className="space-y-8">
-          {brewInfo.packages.length > 0 ? (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-2xl font-semibold text-foreground">
-                    Installed{" "}
-                    {activeType === "formula" ? "Packages" : "Applications"}
-                  </h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Showing {brewInfo.packages.length}{" "}
-                    {activeType === "formula" ? "formulae" : "applications"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-semibold text-foreground">
+                  Installed{" "}
+                  {activeTab === "formula" ? "Packages" : "Applications"}
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Showing {getInstalledPackages(activeTab).length}{" "}
+                  {activeTab === "formula" ? "formulae" : "applications"}
+                </p>
+              </div>
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <span className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-chart-1 rounded-full"></div>
+                  {getInstalledPackages(activeTab).length} total
+                </span>
+                {getOutdatedPackages(activeTab).length > 0 && (
                   <span className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-chart-1 rounded-full"></div>
-                    {brewInfo.packages.length} total
+                    <div className="w-2 h-2 bg-chart-3 rounded-full animate-pulse"></div>
+                    {getOutdatedPackages(activeTab).length} outdated
                   </span>
-                  {brewInfo.packages.filter((pkg) => pkg.outdated).length >
-                    0 && (
-                    <span className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-chart-3 rounded-full animate-pulse"></div>
-                      {brewInfo.packages.filter((pkg) => pkg.outdated).length}{" "}
-                      outdated
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                {brewInfo.packages.map((pkg) => (
-                  <PackageCard
-                    key={pkg.name}
-                    pkg={pkg}
-                    activeTab={activeTab}
-                    loading={loading}
-                    onInstall={installPackage}
-                    onUninstall={uninstallPackage}
-                    onUpdate={updatePackage}
-                  />
-                ))}
+                )}
               </div>
             </div>
-          ) : (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <FiPackage size={24} className="text-primary" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">
-                No {activeType === "formula" ? "formulae" : "applications"}{" "}
-                installed
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                Try switching to{" "}
-                {activeType === "formula" ? "Applications" : "Formulae"} to see
-                your installed{" "}
-                {activeType === "formula" ? "applications" : "formulae"}.
-              </p>
-              <Button
-                onClick={() =>
-                  setActiveType(activeType === "formula" ? "cask" : "formula")
-                }
-                variant="outline"
-                className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-              >
-                Switch to{" "}
-                {activeType === "formula" ? "Applications" : "Formulae"}
-              </Button>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              {getInstalledPackages(activeTab).map((pkg) => (
+                <PackageCard
+                  key={pkg.name}
+                  pkg={pkg}
+                  activeTab={activeView}
+                  loading={
+                    activeTab === "formula" ? loading.formulae : loading.casks
+                  }
+                  onInstall={(name) => installPackage(name, activeTab)}
+                  onUninstall={(name) => uninstallPackage(name, activeTab)}
+                  onUpdate={(name) => updatePackage(name, activeTab)}
+                />
+              ))}
             </div>
-          )}
+          </div>
         </div>
       ) : (
-        <div className="text-center py-16">
-          <Package className="w-16 h-16 mx-auto mb-6 text-muted-foreground" />
-          <h3 className="text-2xl font-bold mb-3">No Apps Found</h3>
-          <p className="text-lg text-muted-foreground mb-6">
-            Make sure Homebrew is installed and try refreshing.
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <FiPackage size={24} className="text-primary" />
+          </div>
+          <h3 className="text-lg font-semibold mb-2">
+            No {activeTab === "formula" ? "formulae" : "applications"} installed
+          </h3>
+          <p className="text-muted-foreground mb-4">
+            Try switching to{" "}
+            {activeTab === "formula" ? "Applications" : "Formulae"} to see your
+            installed {activeTab === "formula" ? "applications" : "formulae"}.
           </p>
           <Button
-            size="lg"
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
+            onClick={() =>
+              setActiveTab(activeTab === "formula" ? "cask" : "formula")
+            }
+            variant="outline"
+            className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
           >
-            <RefreshCw className="w-5 h-5 mr-2" />
-            Refresh Now
+            Switch to {activeTab === "formula" ? "Applications" : "Formulae"}
           </Button>
         </div>
       )}
@@ -319,10 +281,10 @@ function App() {
             key={category.id}
             category={category}
             onCategoryClick={(category) => {
-              setActiveType("cask");
-              setActiveTab("search");
+              setActiveTab("cask");
+              setActiveView("search");
               setSearchQuery(category.id.toLowerCase());
-              searchPackages(category.id.toLowerCase());
+              searchPackages(category.id.toLowerCase(), "cask");
             }}
           />
         ))}
@@ -334,9 +296,9 @@ function App() {
     <div className="min-h-screen bg-background w-full">
       <div className="flex h-screen w-full">
         <AppSidebar
-          activeTab={activeTab}
-          brewInfo={brewInfo}
-          onTabChange={setActiveTab}
+          activeTab={activeView === "updates" ? "installed" : activeView}
+          brewInfo={null}
+          onTabChange={setActiveView}
           onSearchQueryChange={setSearchQuery}
           onSearch={handleSearch}
         />
@@ -349,13 +311,13 @@ function App() {
                   <Home className="w-4 h-4" />
                   <span>/</span>
                   <span className="text-foreground font-medium capitalize">
-                    {activeTab}
+                    {activeView}
                   </span>
-                  {(activeTab === "search" || activeTab === "installed") && (
+                  {(activeView === "search" || activeView === "installed") && (
                     <>
                       <span>/</span>
                       <span className="text-foreground font-medium capitalize">
-                        {activeType === "formula" ? "Formulae" : "Applications"}
+                        {activeTab === "formula" ? "Formulae" : "Applications"}
                       </span>
                     </>
                   )}
@@ -380,30 +342,61 @@ function App() {
                     <DropdownMenuItem>Most popular</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                {brewInfo && brewInfo.total_outdated > 0 && (
+                {getOutdatedPackages(activeTab).length > 0 && (
                   <Button
-                    onClick={updateAllPackages}
-                    disabled={loading}
+                    onClick={() => updateAllPackages(activeTab)}
+                    disabled={
+                      activeTab === "formula" ? loading.formulae : loading.casks
+                    }
                     className="bg-chart-1 text-white hover:bg-chart-1/90"
                   >
                     <FiRefreshCw
                       size={18}
-                      className={loading ? "animate-spin mr-2" : "mr-2"}
+                      className={
+                        (
+                          activeTab === "formula"
+                            ? loading.formulae
+                            : loading.casks
+                        )
+                          ? "animate-spin mr-2"
+                          : "mr-2"
+                      }
                     />
-                    Update All ({brewInfo.total_outdated})
+                    Update All ({getOutdatedPackages(activeTab).length})
                   </Button>
                 )}
                 <Button
-                  onClick={loadBrewInfo}
-                  disabled={loading}
+                  onClick={() => loadPackages(activeTab)}
+                  disabled={
+                    activeTab === "formula" ? loading.formulae : loading.casks
+                  }
                   variant="outline"
                   className="border-border hover:bg-muted bg-transparent"
                 >
                   <FiRefreshCw
                     size={18}
-                    className={loading ? "animate-spin mr-2" : "mr-2"}
+                    className={
+                      (
+                        activeTab === "formula"
+                          ? loading.formulae
+                          : loading.casks
+                      )
+                        ? "animate-spin mr-2"
+                        : "mr-2"
+                    }
                   />
                   Refresh
+                </Button>
+                <Button
+                  onClick={() => {
+                    clearCache();
+                    setActiveView("discover");
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                >
+                  Clear Cache
                 </Button>
               </div>
             </div>
@@ -430,9 +423,9 @@ function App() {
           {/* Content Area */}
           <div className="flex-1 overflow-auto w-full">
             <div className="space-y-8 p-6 w-full max-w-none">
-              {activeTab === "search" && renderSearchContent()}
-              {activeTab === "installed" && renderInstalledContent()}
-              {activeTab === "discover" && renderDiscoverContent()}
+              {activeView === "search" && renderSearchContent()}
+              {activeView === "installed" && renderInstalledContent()}
+              {activeView === "discover" && renderDiscoverContent()}
             </div>
           </div>
         </main>

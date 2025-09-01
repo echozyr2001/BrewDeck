@@ -136,6 +136,7 @@ interface BrewStore {
   // Cache management
   shouldRefetch: (packageType: "formula" | "cask") => boolean;
   clearCache: (packageType?: "formula" | "cask") => void;
+  checkStorageUsage: () => boolean;
 
   // Helper methods
   getPackagesByType: (packageType: "formula" | "cask") => EnhancedBrewPackage[];
@@ -226,6 +227,24 @@ export const useBrewStore = create<BrewStore>()(
         );
       },
 
+      // Check and manage storage usage
+      checkStorageUsage: () => {
+        try {
+          const usage = JSON.stringify(localStorage).length;
+          const limit = 5 * 1024 * 1024; // 5MB rough estimate
+          
+          if (usage > limit * 0.8) { // If over 80% of estimated limit
+            console.warn('Storage usage high, clearing old cache...');
+            get().clearCache();
+            return true;
+          }
+          return false;
+        } catch (error) {
+          console.warn('Could not check storage usage:', error);
+          return false;
+        }
+      },
+
       clearCache: (packageType) => {
         if (!packageType) {
           set((state) => ({
@@ -235,12 +254,22 @@ export const useBrewStore = create<BrewStore>()(
                 ...state.cache.formulae,
                 data: null,
                 lastFetch: null,
+                searchResults: [],
               },
-              casks: { ...state.cache.casks, data: null, lastFetch: null },
+              casks: { 
+                ...state.cache.casks, 
+                data: null, 
+                lastFetch: null,
+                searchResults: [],
+              },
             },
+            // Also clear stored packages to free memory
+            formulae: {},
+            casks: {},
           }));
         } else {
           const cacheKey = packageType === "formula" ? "formulae" : "casks";
+          const storeKey = packageType === "formula" ? "formulae" : "casks";
           set((state) => ({
             cache: {
               ...state.cache,
@@ -248,8 +277,10 @@ export const useBrewStore = create<BrewStore>()(
                 ...state.cache[cacheKey],
                 data: null,
                 lastFetch: null,
+                searchResults: [],
               },
             },
+            [storeKey]: {},
           }));
         }
       },
@@ -340,7 +371,10 @@ export const useBrewStore = create<BrewStore>()(
 
       // Async actions
       loadPackages: async (packageType) => {
-        const { cache, shouldRefetch } = get();
+        const { cache, shouldRefetch, checkStorageUsage } = get();
+        
+        // Check storage usage before loading
+        checkStorageUsage();
         const cacheKey = packageType === "formula" ? "formulae" : "casks";
         const storeKey = packageType === "formula" ? "formulae" : "casks";
         const cached = cache[cacheKey].data;
@@ -374,9 +408,16 @@ export const useBrewStore = create<BrewStore>()(
             packageType === "formula" ? "get_brew_info" : "get_cask_info"
           );
 
-          // Convert array to object for easier access
+          // Convert array to object for easier access with data validation
           const packages = info.packages.reduce((acc, pkg) => {
-            acc[pkg.name] = pkg;
+            // Validate and clean warning objects
+            const cleanedPkg = {
+              ...pkg,
+              warnings: pkg.warnings?.filter(warning => 
+                warning && typeof warning === 'object' && warning.type && warning.message
+              ) || []
+            };
+            acc[pkg.name] = cleanedPkg;
             return acc;
           }, {} as Record<string, EnhancedBrewPackage>);
 
@@ -420,10 +461,20 @@ export const useBrewStore = create<BrewStore>()(
             })();
           }
         } catch (error) {
-          set((state) => ({
-            message: `Error loading ${packageType} packages: ${error}`,
-            loading: { ...state.loading, [storeKey]: false },
-          }));
+          // Handle quota exceeded errors by clearing cache
+          if (error instanceof Error && error.name === 'QuotaExceededError') {
+            console.warn('Storage quota exceeded, clearing cache...');
+            get().clearCache();
+            set((state) => ({
+              message: `Storage full - cleared cache. Please try again.`,
+              loading: { ...state.loading, [storeKey]: false },
+            }));
+          } else {
+            set((state) => ({
+              message: `Error loading ${packageType} packages: ${error}`,
+              loading: { ...state.loading, [storeKey]: false },
+            }));
+          }
         }
       },
 
@@ -708,14 +759,27 @@ export const useBrewStore = create<BrewStore>()(
       name: "brewdeck-store",
       version: 2, // Increment version due to breaking changes
       storage: createJSONStorage(() => localStorage),
-      // Persist only what's useful across restarts
+      // Persist only essential data to avoid quota issues
       partialize: (state) => ({
-        formulae: state.formulae,
-        casks: state.casks,
-        cache: state.cache,
         activeView: state.activeView,
         activeTab: state.activeTab,
         selectedCategory: state.selectedCategory,
+        // Only persist cache metadata, not the full data
+        cache: {
+          formulae: {
+            lastFetch: state.cache.formulae.lastFetch,
+            searchQuery: state.cache.formulae.searchQuery,
+            data: null,
+            searchResults: [],
+          },
+          casks: {
+            lastFetch: state.cache.casks.lastFetch,
+            searchQuery: state.cache.casks.searchQuery,
+            data: null,
+            searchResults: [],
+          },
+          timeout: state.cache.timeout,
+        },
       }),
       // Reset to safe defaults on app startup
       onRehydrateStorage: () => (state) => {

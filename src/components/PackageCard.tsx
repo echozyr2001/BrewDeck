@@ -189,10 +189,12 @@ export const PackageCard = ({
                         </TooltipTrigger>
                         <TooltipContent>
                           <p className="font-medium">
-                            {warning.type.charAt(0).toUpperCase() +
-                              warning.type.slice(1)}
+                            {warning.type ? 
+                              warning.type.charAt(0).toUpperCase() + warning.type.slice(1) : 
+                              'Warning'
+                            }
                           </p>
-                          <p className="text-sm">{warning.message}</p>
+                          <p className="text-sm">{warning.message || 'No details available'}</p>
                         </TooltipContent>
                       </Tooltip>
                     ))}

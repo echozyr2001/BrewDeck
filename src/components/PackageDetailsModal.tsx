@@ -249,9 +249,11 @@ export const PackageDetailsModal = ({
                             </span>
                             <div>
                               <p className="font-medium capitalize">
-                                {warning.type}
+                                {warning.type || "Warning"}
                               </p>
-                              <p className="text-sm mt-1">{warning.message}</p>
+                              <p className="text-sm mt-1">
+                                {warning.message || "No details available"}
+                              </p>
                             </div>
                           </div>
                         </div>
