@@ -4,6 +4,7 @@ import { FiPackage } from "react-icons/fi";
 interface AppIconProps {
   packageName: string;
   description: string;
+  size?: "sm" | "md" | "lg";
 }
 
 // Icon cache management
@@ -27,7 +28,11 @@ const iconCache = {
   },
 };
 
-export const AppIcon = ({ packageName, description }: AppIconProps) => {
+export const AppIcon = ({
+  packageName,
+  description,
+  size = "md",
+}: AppIconProps) => {
   const [iconState, setIconState] = useState<
     "loading" | "loaded" | "fallback" | "failed"
   >("loading");
@@ -73,10 +78,24 @@ export const AppIcon = ({ packageName, description }: AppIconProps) => {
     }
   };
 
+  const sizeClasses = {
+    sm: "w-12 h-12",
+    md: "w-16 h-16",
+    lg: "w-20 h-20",
+  };
+
+  const iconSizeClasses = {
+    sm: "w-6 h-6",
+    md: "w-8 h-8",
+    lg: "w-10 h-10",
+  };
+
   if (iconState === "failed") {
     return (
-      <div className="w-16 h-16 bg-gradient-to-br from-muted via-secondary to-primary rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-primary/15 border border-white/40">
-        <FiPackage className="w-8 h-8 text-primary" />
+      <div
+        className={`${sizeClasses[size]} bg-gradient-to-br from-muted via-secondary to-primary rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-primary/15 border border-white/40`}
+      >
+        <FiPackage className={`${iconSizeClasses[size]} text-primary`} />
       </div>
     );
   }
@@ -84,12 +103,16 @@ export const AppIcon = ({ packageName, description }: AppIconProps) => {
   return (
     <div className="relative flex-shrink-0">
       {iconState === "loading" && (
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-muted via-secondary to-primary animate-pulse shadow-lg shadow-primary/15"></div>
+        <div
+          className={`${sizeClasses[size]} rounded-2xl bg-gradient-to-br from-muted via-secondary to-primary animate-pulse shadow-lg shadow-primary/15`}
+        ></div>
       )}
       <img
         src={currentSrc}
         alt={`${packageName} icon`}
-        className={`w-16 h-16 rounded-2xl object-cover bg-white shadow-lg shadow-primary/15 border border-white/40 ${
+        className={`${
+          sizeClasses[size]
+        } rounded-2xl object-cover bg-white shadow-lg shadow-primary/15 border border-white/40 ${
           iconState === "loading" ? "opacity-0" : ""
         }`}
         onLoad={handleImageLoad}
