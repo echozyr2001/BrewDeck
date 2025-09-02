@@ -1,25 +1,20 @@
-import type React from "react";
-
 import { useEffect } from "react";
-import { FiSearch, FiPackage, FiRefreshCw, FiGrid } from "react-icons/fi";
+import { FiPackage, FiRefreshCw } from "react-icons/fi";
 import { useBrewStore } from "./stores/brewStore";
 import "./App.css";
 import { Button } from "./components/ui/button";
-import { ChevronDown, Filter, Home, RefreshCw, Search } from "lucide-react";
+import { ChevronDown, Filter, Home, RefreshCw } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@radix-ui/react-dropdown-menu";
-import { Card, CardContent } from "./components/ui/card";
-import { Input } from "./components/ui/input";
 import { PackageCard } from "./components/PackageCard";
-import { PackageCardSkeleton } from "./components/PackageCardSkeleton";
-import { CategoryCard } from "./components/CategoryCard";
 import { PackageTypeToggle } from "./components/PackageTypeToggle";
 import { AppSidebar } from "./components/Sidebar";
-import { categories } from "./data/categories";
+import { AdvancedSearchView } from "./components/AdvancedSearchView";
+import { EnhancedDiscoverView } from "./components/EnhancedDiscoverView";
 
 function App() {
   // Zustand store hooks with selective subscriptions
@@ -28,20 +23,16 @@ function App() {
     message,
     activeView,
     activeTab,
-    searchQuery,
     setActiveView,
     setActiveTab,
-    setSearchQuery,
     clearMessage,
     loadPackages,
-    searchPackages,
     installPackage,
     uninstallPackage,
     updatePackage,
     updateAllPackages,
     getInstalledPackages,
     getOutdatedPackages,
-    getSearchResults,
     clearCache,
   } = useBrewStore();
 
@@ -52,120 +43,13 @@ function App() {
     }
   }, [activeView, activeTab]);
 
-  const handleSearch = () => {
-    searchPackages(searchQuery, activeTab);
-  };
+  // Dummy functions for sidebar compatibility
+  const setSearchQuery = () => {};
+  const handleSearch = () => {};
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleSearch();
-    }
-  };
-
-  // Render search content
+  // Render search content - now using AdvancedSearchView
   const renderSearchContent = () => (
-    <div className="space-y-8">
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-3xl font-semibold text-foreground mb-3 text-balance">
-            Discover
-          </h2>
-          <p className="text-lg text-muted-foreground">
-            Find and install amazing apps and tools for your Mac.
-          </p>
-        </div>
-
-        <PackageTypeToggle
-          activeType={activeTab}
-          onTypeChange={(type) => {
-            setActiveTab(type);
-            // Clear search results when switching types
-            if (searchQuery) {
-              searchPackages(searchQuery, type);
-            }
-          }}
-        />
-
-        <Card className="border-border bg-card">
-          <CardContent className="p-6">
-            <div className="flex gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  placeholder={`Search for ${
-                    activeTab === "formula" ? "packages" : "applications"
-                  }...`}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  className="pl-12 h-12 text-base border-border bg-background"
-                />
-              </div>
-              <Button
-                onClick={handleSearch}
-                disabled={loading.search}
-                size="lg"
-                className="h-12 px-8 bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                {loading.search ? (
-                  <RefreshCw className="w-5 h-5 animate-spin mr-2" />
-                ) : (
-                  <Search className="w-5 h-5 mr-2" />
-                )}
-                Search
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {loading.search ? (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <PackageCardSkeleton key={index} />
-          ))}
-        </div>
-      ) : getSearchResults(activeTab).length > 0 ? (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {getSearchResults(activeTab).map((pkg) => (
-            <PackageCard
-              key={pkg.name}
-              pkg={pkg}
-              isSearchResult={true}
-              activeTab={activeView}
-              loading={loading.search}
-              onInstall={(name) => installPackage(name, activeTab)}
-              onUninstall={(name) => uninstallPackage(name, activeTab)}
-              onUpdate={(name) => updatePackage(name, activeTab)}
-            />
-          ))}
-        </div>
-      ) : searchQuery && !loading.search ? (
-        <div className="text-center py-16">
-          <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-            <FiSearch size={24} className="text-muted-foreground" />
-          </div>
-          <h3 className="text-lg font-semibold text-foreground mb-2">
-            No results found
-          </h3>
-          <p className="text-muted-foreground">
-            Try adjusting your search terms or browse categories instead.
-          </p>
-        </div>
-      ) : !searchQuery ? (
-        <div className="text-center py-16">
-          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <FiSearch size={24} className="text-primary" />
-          </div>
-          <h3 className="text-lg font-semibold text-foreground mb-2">
-            Search for packages
-          </h3>
-          <p className="text-muted-foreground">
-            Enter a package name or keyword to get started.
-          </p>
-        </div>
-      ) : null}
-    </div>
+    <AdvancedSearchView />
   );
 
   // Render installed content
@@ -258,38 +142,9 @@ function App() {
     </div>
   );
 
-  // Render discover content
+  // Render discover content - now using EnhancedDiscoverView
   const renderDiscoverContent = () => (
-    <div className="space-y-8">
-      <div className="text-center mb-12">
-        <div className="inline-flex items-center gap-4 mb-6">
-          <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center">
-            <FiGrid size={24} className="text-primary-foreground" />
-          </div>
-          <h2 className="text-4xl font-bold text-foreground text-balance">
-            Discover Applications
-          </h2>
-        </div>
-        <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-          Browse our curated collection of categories to find the perfect
-          applications for your workflow
-        </p>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {categories.map((category) => (
-          <CategoryCard
-            key={category.id}
-            category={category}
-            onCategoryClick={(category) => {
-              setActiveTab("cask");
-              setActiveView("search");
-              setSearchQuery(category.id.toLowerCase());
-              searchPackages(category.id.toLowerCase(), "cask");
-            }}
-          />
-        ))}
-      </div>
-    </div>
+    <EnhancedDiscoverView />
   );
 
   return (

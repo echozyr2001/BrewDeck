@@ -6,7 +6,6 @@ import { Progress } from "./ui/progress";
 import { Separator } from "./ui/separator";
 import {
   Play,
-  Pause,
   Square,
   RefreshCw,
   Trash2,
