@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { CategoryBrowser } from "./CategoryBrowser";
 import { CategoryDetailView } from "./CategoryDetailView";
-import { PackageDetailsModal } from "./PackageDetailsModal";
+import PackageDetailsModal from "./PackageDetailsModal";
 import { useBrewStore } from "../stores/brewStore";
 import type { Category } from "../data/categories";
 import type { EnhancedBrewPackage } from "../stores/brewStore";
@@ -10,14 +10,17 @@ interface EnhancedDiscoverViewProps {
   className?: string;
 }
 
-export const EnhancedDiscoverView: React.FC<EnhancedDiscoverViewProps> = ({
+const EnhancedDiscoverView: React.FC<EnhancedDiscoverViewProps> = ({
   className = "",
 }) => {
   const { installPackage, uninstallPackage, updatePackage } = useBrewStore();
-  
+
   // Local state for navigation
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  const [selectedPackage, setSelectedPackage] = useState<EnhancedBrewPackage | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
+    null
+  );
+  const [selectedPackage, setSelectedPackage] =
+    useState<EnhancedBrewPackage | null>(null);
   const [showPackageDetails, setShowPackageDetails] = useState(false);
 
   // Handle category selection
@@ -87,3 +90,5 @@ export const EnhancedDiscoverView: React.FC<EnhancedDiscoverViewProps> = ({
     </div>
   );
 };
+
+export default EnhancedDiscoverView;

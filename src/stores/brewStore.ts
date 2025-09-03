@@ -232,15 +232,16 @@ export const useBrewStore = create<BrewStore>()(
         try {
           const usage = JSON.stringify(localStorage).length;
           const limit = 5 * 1024 * 1024; // 5MB rough estimate
-          
-          if (usage > limit * 0.8) { // If over 80% of estimated limit
-            console.warn('Storage usage high, clearing old cache...');
+
+          if (usage > limit * 0.8) {
+            // If over 80% of estimated limit
+            console.warn("Storage usage high, clearing old cache...");
             get().clearCache();
             return true;
           }
           return false;
         } catch (error) {
-          console.warn('Could not check storage usage:', error);
+          console.warn("Could not check storage usage:", error);
           return false;
         }
       },
@@ -256,9 +257,9 @@ export const useBrewStore = create<BrewStore>()(
                 lastFetch: null,
                 searchResults: [],
               },
-              casks: { 
-                ...state.cache.casks, 
-                data: null, 
+              casks: {
+                ...state.cache.casks,
+                data: null,
                 lastFetch: null,
                 searchResults: [],
               },
@@ -372,7 +373,7 @@ export const useBrewStore = create<BrewStore>()(
       // Async actions
       loadPackages: async (packageType) => {
         const { cache, shouldRefetch, checkStorageUsage } = get();
-        
+
         // Check storage usage before loading
         checkStorageUsage();
         const cacheKey = packageType === "formula" ? "formulae" : "casks";
@@ -381,12 +382,20 @@ export const useBrewStore = create<BrewStore>()(
 
         // If we have cached data, expose it immediately
         if (cached) {
+          // Record cache hit for performance monitoring
+          if (
+            typeof window !== "undefined" &&
+            (window as any).performanceMonitor
+          ) {
+            (window as any).performanceMonitor.incrementCounter("cache-hit");
+          }
+
           const packages = cached.packages.reduce((acc, pkg) => {
             acc[pkg.name] = pkg;
             return acc;
           }, {} as Record<string, EnhancedBrewPackage>);
 
-          set((state) => ({
+          set(() => ({
             [storeKey]: packages,
           }));
         }
@@ -395,6 +404,14 @@ export const useBrewStore = create<BrewStore>()(
 
         // Set loading state
         if (!cached) {
+          // Record cache miss for performance monitoring
+          if (
+            typeof window !== "undefined" &&
+            (window as any).performanceMonitor
+          ) {
+            (window as any).performanceMonitor.incrementCounter("cache-miss");
+          }
+
           set((state) => ({
             loading: { ...state.loading, [storeKey]: true },
           }));
@@ -413,9 +430,14 @@ export const useBrewStore = create<BrewStore>()(
             // Validate and clean warning objects
             const cleanedPkg = {
               ...pkg,
-              warnings: pkg.warnings?.filter(warning => 
-                warning && typeof warning === 'object' && warning.type && warning.message
-              ) || []
+              warnings:
+                pkg.warnings?.filter(
+                  (warning) =>
+                    warning &&
+                    typeof warning === "object" &&
+                    warning.type &&
+                    warning.message
+                ) || [],
             };
             acc[pkg.name] = cleanedPkg;
             return acc;
@@ -434,36 +456,50 @@ export const useBrewStore = create<BrewStore>()(
             loading: { ...state.loading, [storeKey]: false },
           }));
 
-          // Prefetch the other type in background if not cached yet
+          // Intelligent prefetch the other type in background if not cached yet
           const otherType: "formula" | "cask" =
             packageType === "formula" ? "cask" : "formula";
           const otherCacheKey = otherType === "formula" ? "formulae" : "casks";
           const hasOther = get().cache[otherCacheKey].data;
+
           if (!hasOther) {
-            (async () => {
+            // Use intelligent prefetching with network awareness
+            const prefetchOtherType = async () => {
               try {
-                const otherInfo = await invoke<BrewInfo>(
-                  otherType === "formula" ? "get_brew_info" : "get_cask_info"
-                );
-                set((state) => ({
-                  cache: {
-                    ...state.cache,
-                    [otherCacheKey]: {
-                      ...state.cache[otherCacheKey],
-                      data: otherInfo,
-                      lastFetch: Date.now(),
+                // Check network conditions before prefetching
+                const connection = (navigator as any).connection;
+                const shouldPrefetch =
+                  !connection?.saveData &&
+                  connection?.effectiveType !== "slow-2g" &&
+                  connection?.effectiveType !== "2g";
+
+                if (shouldPrefetch) {
+                  const otherInfo = await invoke<BrewInfo>(
+                    otherType === "formula" ? "get_brew_info" : "get_cask_info"
+                  );
+                  set((state) => ({
+                    cache: {
+                      ...state.cache,
+                      [otherCacheKey]: {
+                        ...state.cache[otherCacheKey],
+                        data: otherInfo,
+                        lastFetch: Date.now(),
+                      },
                     },
-                  },
-                }));
+                  }));
+                }
               } catch {
                 // silent prefetch failure
               }
-            })();
+            };
+
+            // Delay prefetch to avoid overwhelming the system
+            setTimeout(prefetchOtherType, 2000);
           }
         } catch (error) {
           // Handle quota exceeded errors by clearing cache
-          if (error instanceof Error && error.name === 'QuotaExceededError') {
-            console.warn('Storage quota exceeded, clearing cache...');
+          if (error instanceof Error && error.name === "QuotaExceededError") {
+            console.warn("Storage quota exceeded, clearing cache...");
             get().clearCache();
             set((state) => ({
               message: `Storage full - cleared cache. Please try again.`,
@@ -568,9 +604,31 @@ export const useBrewStore = create<BrewStore>()(
 
           set({ message: result });
 
-          // Refresh data if we're not in discover view
+          // Immediately update the package state to reflect that it's installed
+          const storeKey = packageType === "formula" ? "formulae" : "casks";
+          const cacheKey = packageType === "formula" ? "formulae" : "casks";
+          set((state) => ({
+            [storeKey]: {
+              ...state[storeKey],
+              [packageName]: {
+                ...state[storeKey][packageName],
+                installed: true,
+                outdated: false,
+              },
+            },
+            // Invalidate cache to ensure fresh data on next load
+            cache: {
+              ...state.cache,
+              [cacheKey]: {
+                ...state.cache[cacheKey],
+                lastFetch: null,
+              },
+            },
+          }));
+
+          // Refresh data if we're not in discover view (but with a slight delay to allow backend to settle)
           if (activeView !== "discover") {
-            await loadPackages(packageType);
+            setTimeout(() => loadPackages(packageType), 1000);
           }
 
           // Remove completed operation after a delay
@@ -624,9 +682,31 @@ export const useBrewStore = create<BrewStore>()(
 
           set({ message: result });
 
-          // Refresh data if we're not in discover view
+          // Immediately update the package state to reflect that it's uninstalled
+          const storeKey = packageType === "formula" ? "formulae" : "casks";
+          const cacheKey = packageType === "formula" ? "formulae" : "casks";
+          set((state) => ({
+            [storeKey]: {
+              ...state[storeKey],
+              [packageName]: {
+                ...state[storeKey][packageName],
+                installed: false,
+                outdated: false,
+              },
+            },
+            // Invalidate cache to ensure fresh data on next load
+            cache: {
+              ...state.cache,
+              [cacheKey]: {
+                ...state.cache[cacheKey],
+                lastFetch: null,
+              },
+            },
+          }));
+
+          // Refresh data if we're not in discover view (but with a slight delay to allow backend to settle)
           if (activeView !== "discover") {
-            await loadPackages(packageType);
+            setTimeout(() => loadPackages(packageType), 1000);
           }
 
           // Remove completed operation after a delay
@@ -680,9 +760,30 @@ export const useBrewStore = create<BrewStore>()(
 
           set({ message: result });
 
-          // Refresh data if we're not in discover view
+          // Immediately update the package state to reflect that it's no longer outdated
+          const storeKey = packageType === "formula" ? "formulae" : "casks";
+          const cacheKey = packageType === "formula" ? "formulae" : "casks";
+          set((state) => ({
+            [storeKey]: {
+              ...state[storeKey],
+              [packageName]: {
+                ...state[storeKey][packageName],
+                outdated: false,
+              },
+            },
+            // Invalidate cache to ensure fresh data on next load
+            cache: {
+              ...state.cache,
+              [cacheKey]: {
+                ...state.cache[cacheKey],
+                lastFetch: null,
+              },
+            },
+          }));
+
+          // Refresh data if we're not in discover view (but with a slight delay to allow backend to settle)
           if (activeView !== "discover") {
-            await loadPackages(packageType);
+            setTimeout(() => loadPackages(packageType), 1000);
           }
 
           // Remove completed operation after a delay

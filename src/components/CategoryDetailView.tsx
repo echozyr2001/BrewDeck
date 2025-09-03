@@ -1,5 +1,15 @@
 import React, { useState, useMemo } from "react";
-import { ArrowLeft, Package, Star, Download, Clock, Filter, Grid, List, Search } from "lucide-react";
+import {
+  ArrowLeft,
+  Package,
+  Star,
+  Download,
+  Clock,
+  Filter,
+  Grid,
+  List,
+  Search,
+} from "lucide-react";
 import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -16,6 +26,7 @@ import {
 } from "./ui/dropdown-menu";
 import { getCategoryIcon } from "../utils/categoryUtils";
 import { useBrewStore } from "../stores/brewStore";
+import { VirtualizedPackageList } from "./VirtualizedPackageList";
 import type { Category } from "../data/categories";
 import type { EnhancedBrewPackage } from "../stores/brewStore";
 
@@ -41,7 +52,9 @@ const formatDownloads = (count: number): string => {
 };
 
 // Get popularity badge variant
-const getPopularityVariant = (popularity: number): "default" | "secondary" | "outline" => {
+const getPopularityVariant = (
+  popularity: number
+): "default" | "secondary" | "outline" => {
   if (popularity >= 0.7) return "default";
   if (popularity >= 0.3) return "secondary";
   return "outline";
@@ -57,7 +70,7 @@ export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
   className = "",
 }) => {
   const { getPackagesByType } = useBrewStore();
-  
+
   // Local state
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("popularity");
@@ -67,7 +80,7 @@ export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
   // Get all cask packages and filter by category
   const allCasks = getPackagesByType("cask");
   const categoryPackages = useMemo(() => {
-    return allCasks.filter(pkg => category.casks.includes(pkg.name));
+    return allCasks.filter((pkg) => category.casks.includes(pkg.name));
   }, [allCasks, category.casks]);
 
   // Filter packages based on search and filters
@@ -77,22 +90,23 @@ export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(pkg =>
-        pkg.name.toLowerCase().includes(query) ||
-        pkg.description.toLowerCase().includes(query)
+      filtered = filtered.filter(
+        (pkg) =>
+          pkg.name.toLowerCase().includes(query) ||
+          pkg.description.toLowerCase().includes(query)
       );
     }
 
     // Apply status filter
     switch (filterBy) {
       case "installed":
-        filtered = filtered.filter(pkg => pkg.installed);
+        filtered = filtered.filter((pkg) => pkg.installed);
         break;
       case "not-installed":
-        filtered = filtered.filter(pkg => !pkg.installed);
+        filtered = filtered.filter((pkg) => !pkg.installed);
         break;
       case "outdated":
-        filtered = filtered.filter(pkg => pkg.outdated);
+        filtered = filtered.filter((pkg) => pkg.outdated);
         break;
     }
 
@@ -127,10 +141,12 @@ export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
   // Calculate category stats
   const stats = useMemo(() => {
     const total = categoryPackages.length;
-    const installed = categoryPackages.filter(pkg => pkg.installed).length;
-    const outdated = categoryPackages.filter(pkg => pkg.outdated).length;
-    const popular = categoryPackages.filter(pkg => 
-      pkg.enhancedAnalytics?.popularity && pkg.enhancedAnalytics.popularity > 0.7
+    const installed = categoryPackages.filter((pkg) => pkg.installed).length;
+    const outdated = categoryPackages.filter((pkg) => pkg.outdated).length;
+    const popular = categoryPackages.filter(
+      (pkg) =>
+        pkg.enhancedAnalytics?.popularity &&
+        pkg.enhancedAnalytics.popularity > 0.7
     ).length;
 
     return { total, installed, outdated, popular };
@@ -172,17 +188,16 @@ export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
           {/* Metadata */}
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <div className="flex items-center gap-1">
-              <Package className="w-3 h-3" />
-              v{pkg.version}
+              <Package className="w-3 h-3" />v{pkg.version}
             </div>
-            
+
             {pkg.enhancedAnalytics?.downloads365d && (
               <div className="flex items-center gap-1">
                 <Download className="w-3 h-3" />
                 {formatDownloads(pkg.enhancedAnalytics.downloads365d)}
               </div>
             )}
-            
+
             {pkg.lastUpdated && (
               <div className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
@@ -196,7 +211,9 @@ export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
             <div className="flex items-center gap-2">
               {pkg.enhancedAnalytics?.popularity !== undefined && (
                 <Badge
-                  variant={getPopularityVariant(pkg.enhancedAnalytics.popularity)}
+                  variant={getPopularityVariant(
+                    pkg.enhancedAnalytics.popularity
+                  )}
                   className="text-xs"
                 >
                   <Star className="w-3 h-3 mr-1" />
@@ -246,7 +263,7 @@ export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
                 Install
               </Button>
             )}
-            
+
             <Button
               size="sm"
               variant="ghost"
@@ -296,7 +313,7 @@ export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2 ml-4">
             {pkg.enhancedAnalytics?.popularity !== undefined && (
               <Badge
@@ -306,7 +323,7 @@ export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
                 {Math.round(pkg.enhancedAnalytics.popularity * 100)}%
               </Badge>
             )}
-            
+
             {pkg.installed ? (
               <div className="flex gap-1">
                 {pkg.outdated && (
@@ -356,12 +373,7 @@ export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
       {/* Header */}
       <div className="space-y-4">
         <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onBack}
-            className="gap-2"
-          >
+          <Button variant="ghost" size="sm" onClick={onBack} className="gap-2">
             <ArrowLeft className="w-4 h-4" />
             Back to Categories
           </Button>
@@ -423,11 +435,22 @@ export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuRadioGroup value={filterBy} onValueChange={(value) => setFilterBy(value as FilterOption)}>
-                <DropdownMenuRadioItem value="all">All packages</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="installed">Installed only</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="not-installed">Not installed</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="outdated">Outdated only</DropdownMenuRadioItem>
+              <DropdownMenuRadioGroup
+                value={filterBy}
+                onValueChange={(value) => setFilterBy(value as FilterOption)}
+              >
+                <DropdownMenuRadioItem value="all">
+                  All packages
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="installed">
+                  Installed only
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="not-installed">
+                  Not installed
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="outdated">
+                  Outdated only
+                </DropdownMenuRadioItem>
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -441,16 +464,26 @@ export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Sort Options</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuRadioGroup value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
-                <DropdownMenuRadioItem value="popularity">Popularity</DropdownMenuRadioItem>
+              <DropdownMenuRadioGroup
+                value={sortBy}
+                onValueChange={(value) => setSortBy(value as SortOption)}
+              >
+                <DropdownMenuRadioItem value="popularity">
+                  Popularity
+                </DropdownMenuRadioItem>
                 <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="updated">Last Updated</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="updated">
+                  Last Updated
+                </DropdownMenuRadioItem>
                 <DropdownMenuRadioItem value="size">Size</DropdownMenuRadioItem>
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)}>
+          <Tabs
+            value={viewMode}
+            onValueChange={(value) => setViewMode(value as ViewMode)}
+          >
             <TabsList>
               <TabsTrigger value="grid" className="gap-2">
                 <Grid className="w-4 h-4" />
@@ -483,11 +516,26 @@ export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
           <>
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm text-muted-foreground">
-                Showing {sortedPackages.length} of {categoryPackages.length} packages
+                Showing {sortedPackages.length} of {categoryPackages.length}{" "}
+                packages
               </p>
             </div>
-            
-            {viewMode === "grid" ? (
+
+            {sortedPackages.length > 30 ? (
+              <VirtualizedPackageList
+                packages={sortedPackages}
+                loading={false}
+                onInstall={onInstall}
+                onUninstall={onUninstall}
+                onUpdate={onUpdate}
+                onPackageClick={onPackageSelect}
+                packageType="cask"
+                viewMode={viewMode}
+                density="comfortable"
+                height={600}
+                className="w-full"
+              />
+            ) : viewMode === "grid" ? (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {sortedPackages.map(renderPackageCard)}
               </div>

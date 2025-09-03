@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, Suspense, lazy } from "react";
 import { FiPackage, FiRefreshCw } from "react-icons/fi";
 import { useBrewStore } from "./stores/brewStore";
 import "./App.css";
@@ -13,10 +13,45 @@ import {
 import { PackageCard } from "./components/PackageCard";
 import { PackageTypeToggle } from "./components/PackageTypeToggle";
 import { AppSidebar } from "./components/Sidebar";
-import { AdvancedSearchView } from "./components/AdvancedSearchView";
-import { EnhancedDiscoverView } from "./components/EnhancedDiscoverView";
+import { VirtualizedPackageList } from "./components/VirtualizedPackageList";
+import { FullPageLoader } from "./components/LoadingStates";
+import { usePerformanceMonitoring } from "./utils/performance";
+import {
+  preloadCriticalResources,
+  shouldLoadResource,
+} from "./utils/lazyLoading";
+
+// Lazy load heavy view components for code splitting
+const AdvancedSearchView = lazy(() =>
+  import("./components/AdvancedSearchView").then((module) => {
+    // Track component load time
+    console.log("AdvancedSearchView loaded");
+    return module;
+  })
+);
+
+const EnhancedDiscoverView = lazy(() =>
+  import("./components/EnhancedDiscoverView").then((module) => {
+    // Track component load time
+    console.log("EnhancedDiscoverView loaded");
+    return module;
+  })
+);
+
+// Lazy load non-critical components (loaded on demand)
+// const PackageDetailsModal = lazy(() => import("./components/PackageDetailsModal"));
+// const BatchOperationManager = lazy(() => import("./components/BatchOperationManager"));
+
+// Conditionally load performance monitor only in development
+const PerformanceMonitor =
+  process.env.NODE_ENV === "development"
+    ? lazy(() => import("./components/PerformanceMonitor"))
+    : null;
 
 function App() {
+  // Performance monitoring
+  const { startOperation, endOperation } = usePerformanceMonitoring();
+
   // Zustand store hooks with selective subscriptions
   const {
     loading,
@@ -36,20 +71,39 @@ function App() {
     clearCache,
   } = useBrewStore();
 
-  // Load initial data
+  // Preload critical resources on app start
+  useEffect(() => {
+    if (shouldLoadResource("high")) {
+      preloadCriticalResources([
+        // Add critical CSS and JS chunks that should be preloaded
+        "/css/main.css",
+      ]);
+    }
+  }, []);
+
+  // Load initial data with performance monitoring
   useEffect(() => {
     if (activeView !== "discover") {
-      loadPackages(activeTab);
+      startOperation("load-packages");
+      loadPackages(activeTab).finally(() => {
+        endOperation("load-packages", true);
+      });
     }
-  }, [activeView, activeTab]);
+  }, [activeView, activeTab, startOperation, endOperation, loadPackages]);
 
   // Dummy functions for sidebar compatibility
   const setSearchQuery = () => {};
   const handleSearch = () => {};
 
-  // Render search content - now using AdvancedSearchView
+  // Render search content - now using AdvancedSearchView with Suspense
   const renderSearchContent = () => (
-    <AdvancedSearchView />
+    <Suspense
+      fallback={
+        <FullPageLoader title="Loading Search" message="Loading search..." />
+      }
+    >
+      <AdvancedSearchView />
+    </Suspense>
   );
 
   // Render installed content
@@ -98,21 +152,38 @@ function App() {
                 )}
               </div>
             </div>
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              {getInstalledPackages(activeTab).map((pkg) => (
-                <PackageCard
-                  key={pkg.name}
-                  pkg={pkg}
-                  activeTab={activeView}
-                  loading={
-                    activeTab === "formula" ? loading.formulae : loading.casks
-                  }
-                  onInstall={(name) => installPackage(name, activeTab)}
-                  onUninstall={(name) => uninstallPackage(name, activeTab)}
-                  onUpdate={(name) => updatePackage(name, activeTab)}
-                />
-              ))}
-            </div>
+            {getInstalledPackages(activeTab).length > 20 ? (
+              <VirtualizedPackageList
+                packages={getInstalledPackages(activeTab)}
+                loading={
+                  activeTab === "formula" ? loading.formulae : loading.casks
+                }
+                onInstall={(name) => installPackage(name, activeTab)}
+                onUninstall={(name) => uninstallPackage(name, activeTab)}
+                onUpdate={(name) => updatePackage(name, activeTab)}
+                packageType={activeTab}
+                viewMode="grid"
+                density="comfortable"
+                height={600}
+                className="w-full"
+              />
+            ) : (
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                {getInstalledPackages(activeTab).map((pkg) => (
+                  <PackageCard
+                    key={pkg.name}
+                    pkg={pkg}
+                    activeTab={activeView}
+                    loading={
+                      activeTab === "formula" ? loading.formulae : loading.casks
+                    }
+                    onInstall={(name) => installPackage(name, activeTab)}
+                    onUninstall={(name) => uninstallPackage(name, activeTab)}
+                    onUpdate={(name) => updatePackage(name, activeTab)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       ) : (
@@ -142,9 +213,18 @@ function App() {
     </div>
   );
 
-  // Render discover content - now using EnhancedDiscoverView
+  // Render discover content - now using EnhancedDiscoverView with Suspense
   const renderDiscoverContent = () => (
-    <EnhancedDiscoverView />
+    <Suspense
+      fallback={
+        <FullPageLoader
+          title="Loading Discover"
+          message="Loading discover..."
+        />
+      }
+    >
+      <EnhancedDiscoverView />
+    </Suspense>
   );
 
   return (
@@ -285,6 +365,13 @@ function App() {
           </div>
         </main>
       </div>
+
+      {/* Performance Monitor (Development Only) */}
+      {PerformanceMonitor && process.env.NODE_ENV === "development" && (
+        <Suspense fallback={null}>
+          <PerformanceMonitor />
+        </Suspense>
+      )}
     </div>
   );
 }

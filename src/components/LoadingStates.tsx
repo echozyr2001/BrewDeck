@@ -129,7 +129,7 @@ export const TabLoader = ({
     {/* Tab bar skeleton */}
     <div className="bg-muted/30 p-1 rounded-xl border border-border/50">
       <div className="flex relative">
-        {tabs.map((tab, index) => (
+        {tabs.map((tab, _) => (
           <div
             key={tab.id}
             className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-lg ${

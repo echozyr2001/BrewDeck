@@ -30,9 +30,8 @@ interface BatchOperationManagerProps {
 /**
  * Component for managing batch operations
  */
-export const BatchOperationManager: React.FC<BatchOperationManagerProps> = ({
+const BatchOperationManager: React.FC<BatchOperationManagerProps> = ({
   selectedPackages = [],
-  onSelectionChange,
 }) => {
   const {
     queueStats,
@@ -391,7 +390,7 @@ export const BatchOperationManager: React.FC<BatchOperationManagerProps> = ({
               <div className="max-h-32 overflow-y-auto border rounded p-2">
                 <p className="text-sm font-medium mb-2">Selected Packages:</p>
                 <div className="space-y-1">
-                  {selectedPackages.map((pkg, index) => (
+                  {selectedPackages.map((pkg, _) => (
                     <div
                       key={`${pkg.packageType}-${pkg.name}`}
                       className="flex items-center justify-between text-sm"

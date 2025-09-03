@@ -4,7 +4,7 @@ import { usePackageSearch } from "../hooks/usePackageSearch";
 import { AdvancedSearchBar } from "./AdvancedSearchBar";
 import { SearchResults } from "./SearchResults";
 import { PackageTabBar } from "./PackageTabBar";
-import { PackageDetailsModal } from "./PackageDetailsModal";
+import PackageDetailsModal from "./PackageDetailsModal";
 import { AdvancedFilters } from "./AdvancedFilters";
 import { useUserPreferences } from "../hooks/useUserPreferences";
 import type { EnhancedBrewPackage } from "../stores/brewStore";
@@ -13,7 +13,7 @@ interface AdvancedSearchViewProps {
   className?: string;
 }
 
-export const AdvancedSearchView: React.FC<AdvancedSearchViewProps> = ({
+const AdvancedSearchView: React.FC<AdvancedSearchViewProps> = ({
   className = "",
 }) => {
   const {
@@ -43,9 +43,12 @@ export const AdvancedSearchView: React.FC<AdvancedSearchViewProps> = ({
   const { preferences } = useUserPreferences();
 
   // Local state for package details modal and view mode
-  const [selectedPackage, setSelectedPackage] = useState<EnhancedBrewPackage | null>(null);
+  const [selectedPackage, setSelectedPackage] =
+    useState<EnhancedBrewPackage | null>(null);
   const [showPackageDetails, setShowPackageDetails] = useState(false);
-  const [viewMode, setViewMode] = useState<"grid" | "list">(preferences.view.viewMode);
+  const [viewMode, setViewMode] = useState<"grid" | "list">(
+    preferences.view.viewMode
+  );
 
   // Get filtered and sorted results
   const searchResults = getFilteredResults();
@@ -162,6 +165,9 @@ export const AdvancedSearchView: React.FC<AdvancedSearchViewProps> = ({
         density={preferences.view.gridDensity}
         showAnalytics={preferences.view.showAnalytics}
         showDescriptions={preferences.view.showDescriptions}
+        packageType={activeTab}
+        useVirtualization={true}
+        virtualizationThreshold={50}
       />
 
       {/* Package Details Modal */}
@@ -178,3 +184,5 @@ export const AdvancedSearchView: React.FC<AdvancedSearchViewProps> = ({
     </div>
   );
 };
+
+export default AdvancedSearchView;

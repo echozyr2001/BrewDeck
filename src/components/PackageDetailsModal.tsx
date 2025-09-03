@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -14,7 +14,6 @@ import {
   FiAlertTriangle,
   FiInfo,
   FiTrendingUp,
-  FiHardDrive,
   FiClock,
   FiGitBranch,
   FiUsers,
@@ -36,7 +35,7 @@ interface PackageDetailsModalProps {
   loading?: boolean;
 }
 
-export const PackageDetailsModal = ({
+const PackageDetailsModal = ({
   pkg,
   isOpen,
   onClose,
@@ -605,3 +604,4 @@ export const PackageDetailsModal = ({
     </Dialog>
   );
 };
+export default PackageDetailsModal;

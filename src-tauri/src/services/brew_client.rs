@@ -317,7 +317,7 @@ impl BrewClient {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Eq, Hash, PartialEq)]
 pub enum PackageType {
     Formula,
     Cask,

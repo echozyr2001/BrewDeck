@@ -5,7 +5,8 @@ use error::BrewDeckError;
 use services::brew_client::PackageType;
 use services::cache_manager::CacheConfig;
 use services::package_service::BrewPackage;
-use services::{BrewClient, CacheManager, PackageService};
+use services::prefetch_service::{PrefetchConfig, PrefetchStats, NetworkConditions};
+use services::{BrewClient, CacheManager, PackageService, PrefetchService};
 
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -20,6 +21,7 @@ pub struct BrewInfo {
 
 // Global service instances
 static mut PACKAGE_SERVICE: Option<Arc<PackageService>> = None;
+static mut PREFETCH_SERVICE: Option<Arc<PrefetchService>> = None;
 
 async fn get_package_service() -> Result<Arc<PackageService>, BrewDeckError> {
     unsafe {
@@ -32,11 +34,24 @@ async fn get_package_service() -> Result<Arc<PackageService>, BrewDeckError> {
             let cache_manager = Arc::new(CacheManager::new(cache_config));
 
             // Create package service
-            let service = Arc::new(PackageService::new(cache_manager).await?);
-            PACKAGE_SERVICE = Some(service);
+            let service = Arc::new(PackageService::new(cache_manager.clone()).await?);
+            PACKAGE_SERVICE = Some(service.clone());
+
+            // Create prefetch service
+            let prefetch_service = Arc::new(PrefetchService::new(service, cache_manager));
+            prefetch_service.clone().start_background_tasks();
+            PREFETCH_SERVICE = Some(prefetch_service);
         }
 
         Ok(PACKAGE_SERVICE.as_ref().unwrap().clone())
+    }
+}
+
+async fn get_prefetch_service() -> Result<Arc<PrefetchService>, BrewDeckError> {
+    unsafe {
+        // Ensure package service is initialized first
+        get_package_service().await?;
+        Ok(PREFETCH_SERVICE.as_ref().unwrap().clone())
     }
 }
 
@@ -247,6 +262,45 @@ async fn get_package_details(
 }
 
 #[tauri::command]
+async fn update_prefetch_config(config: PrefetchConfig) -> Result<(), String> {
+    let service = get_prefetch_service().await.map_err(|e| e.to_string())?;
+    service.update_config(config).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn update_network_conditions(conditions: NetworkConditions) -> Result<(), String> {
+    let service = get_prefetch_service().await.map_err(|e| e.to_string())?;
+    service.update_network_conditions(conditions).await;
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_prefetch_stats() -> Result<PrefetchStats, String> {
+    let service = get_prefetch_service().await.map_err(|e| e.to_string())?;
+    Ok(service.get_stats().await)
+}
+
+#[tauri::command]
+async fn prefetch_popular_packages(package_type: String) -> Result<(), String> {
+    let service = get_prefetch_service().await.map_err(|e| e.to_string())?;
+    let pkg_type = package_type.parse::<PackageType>().map_err(|e| e.to_string())?;
+    service.prefetch_popular_packages(pkg_type).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn prefetch_related_packages(package_name: String, package_type: String) -> Result<(), String> {
+    let service = get_prefetch_service().await.map_err(|e| e.to_string())?;
+    let pkg_type = package_type.parse::<PackageType>().map_err(|e| e.to_string())?;
+    service.prefetch_related_packages(&package_name, pkg_type).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn predictive_prefetch(user_patterns: Vec<String>) -> Result<(), String> {
+    let service = get_prefetch_service().await.map_err(|e| e.to_string())?;
+    service.predictive_prefetch(user_patterns).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {name}! You've been greeted from Rust!")
 }
@@ -269,7 +323,13 @@ pub fn run() {
             uninstall_cask,
             update_cask,
             update_all_casks,
-            get_package_details
+            get_package_details,
+            update_prefetch_config,
+            update_network_conditions,
+            get_prefetch_stats,
+            prefetch_popular_packages,
+            prefetch_related_packages,
+            predictive_prefetch
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

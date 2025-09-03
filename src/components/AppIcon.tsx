@@ -36,7 +36,7 @@ export const AppIcon = ({
   const [iconState, setIconState] = useState<
     "loading" | "loaded" | "fallback" | "failed"
   >("loading");
-  const [currentSrc, setCurrentSrc] = useState<string>("");
+  const [currentSrc, setCurrentSrc] = useState<string | null>(null);
 
   const iconUrls = useMemo(() => {
     const primaryUrl = `https://github.com/App-Fair/appcasks/releases/download/cask-${packageName}/AppIcon.png`;
@@ -64,7 +64,9 @@ export const AppIcon = ({
 
   const handleImageLoad = () => {
     setIconState("loaded");
-    iconCache.set(packageName, currentSrc);
+    if (currentSrc) {
+      iconCache.set(packageName, currentSrc);
+    }
   };
 
   const handleImageError = () => {
@@ -107,18 +109,20 @@ export const AppIcon = ({
           className={`${sizeClasses[size]} rounded-2xl bg-gradient-to-br from-muted via-secondary to-primary animate-pulse shadow-lg shadow-primary/15`}
         ></div>
       )}
-      <img
-        src={currentSrc}
-        alt={`${packageName} icon`}
-        className={`${
-          sizeClasses[size]
-        } rounded-2xl object-cover bg-white shadow-lg shadow-primary/15 border border-white/40 ${
-          iconState === "loading" ? "opacity-0" : ""
-        }`}
-        onLoad={handleImageLoad}
-        onError={handleImageError}
-        style={{ display: iconState === "loading" ? "none" : "block" }}
-      />
+      {currentSrc && (
+        <img
+          src={currentSrc}
+          alt={`${packageName} icon`}
+          className={`${
+            sizeClasses[size]
+          } rounded-2xl object-cover bg-white shadow-lg shadow-primary/15 border border-white/40 ${
+            iconState === "loading" ? "opacity-0" : ""
+          }`}
+          onLoad={handleImageLoad}
+          onError={handleImageError}
+          style={{ display: iconState === "loading" ? "none" : "block" }}
+        />
+      )}
     </div>
   );
 };
